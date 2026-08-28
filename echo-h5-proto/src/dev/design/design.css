@@ -1,0 +1,514 @@
+/* 🔴 设计稿样式。随 src/dev/ 一起删；被推荐的那一版整段搬进 app.css 即可上生产。 */
+
+/* ============================================================
+   一、暖光标记
+   三档的差别在「有几层晕」+「文字的分量」，不在透明度。
+   ============================================================ */
+
+.wm { display: inline-flex; align-items: center; gap: 7px; }
+
+.wm-glyph {
+  display: inline-block; border-radius: 50%; flex: none;
+  background: radial-gradient(circle at 38% 32%, #ffe7bb 0%, #f2c37c 45%, #dd9f45 100%);
+}
+.wm-sm .wm-glyph { width: 6px; height: 6px; }
+.wm-lg .wm-glyph { width: 9px; height: 9px; }
+
+/* low —— 一个光点。没有晕，也就没有「离下一档还差多少」可看 */
+.wm-low .wm-glyph { opacity: .75; }
+.wm-low .wm-text { color: var(--ink-3); }
+
+/* mid —— 一层晕 */
+.wm-mid.wm-sm .wm-glyph { box-shadow: 0 0 0 4px rgba(240, 194, 122, .30); }
+.wm-mid.wm-lg .wm-glyph { box-shadow: 0 0 0 6px rgba(240, 194, 122, .30); }
+.wm-mid .wm-text { color: var(--ink-2); }
+
+/* high —— 两层晕 + 极缓的呼吸。7 秒一个周期，扫视时只留下「这张在发光」 */
+.wm-high.wm-sm .wm-glyph {
+  box-shadow: 0 0 0 4px rgba(240, 194, 122, .38), 0 0 0 8px rgba(231, 154, 166, .20),
+              0 0 12px 3px rgba(240, 194, 122, .50);
+  animation: wm-breathe 7s ease-in-out infinite;
+}
+.wm-high.wm-lg .wm-glyph {
+  box-shadow: 0 0 0 6px rgba(240, 194, 122, .38), 0 0 0 12px rgba(231, 154, 166, .20),
+              0 0 18px 5px rgba(240, 194, 122, .50);
+  animation: wm-breathe 7s ease-in-out infinite;
+}
+.wm-high .wm-text { color: var(--amber-deep); font-weight: 600; }
+
+.wm-text { font-size: 11.5px; letter-spacing: .2px; white-space: nowrap; }
+.wm-lg .wm-text { font-size: 13px; }
+
+@keyframes wm-breathe {
+  0%, 100% { opacity: .78; }
+  50%      { opacity: 1; }
+}
+
+/* 三档图例 */
+.wm-legend {
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: 18px; padding: 18px 16px 20px; margin: 0 0 14px;
+}
+.wm-legend-cap { font-size: 12px; color: var(--ink-3); margin-bottom: 16px; text-align: center; }
+.wm-legend-row { display: flex; justify-content: space-around; align-items: flex-end; }
+.wm-legend-item { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.wm-legend-text { font-size: 12.5px; color: var(--ink-2); }
+
+/* 乙案：只有 high 档的封面会亮 —— 整屏里只剩少数几张，「亮」才重新是一个信息。
+   光从画面下缘打上来，像有人在下面点了一盏灯，而不是给整张图蒙一层色。 */
+.dz-cover-warm {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(125% 72% at 50% 116%,
+    rgba(255, 197, 112, .92) 0%, rgba(255, 190, 104, .46) 36%, rgba(255, 190, 104, .12) 60%, transparent 76%);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 216, 154, .5);
+  animation: wm-breathe 7s ease-in-out infinite;
+}
+/* 卡片本身也带一点外溢的暖 —— 在瀑布流里是「这一张亮着」而不是「这一张被涂黄了」 */
+.dz-high { box-shadow: 0 6px 18px rgba(150, 120, 70, .1), 0 0 26px rgba(228, 162, 74, .55); }
+
+/* ============================================================
+   二、陌生人视角的窗口页
+   ============================================================ */
+
+.sw { position: relative; background: var(--cream); }
+
+.sw-nav {
+  display: flex; align-items: center; gap: 10px;
+  height: 50px; padding: 0 14px;
+}
+.sw-nav-back { font-size: 28px; line-height: 1; color: var(--ink-2); font-weight: 300; }
+.sw-nav-title { font-size: 15.5px; font-weight: 700; color: var(--ink); }
+.sw-nav-right { margin-left: auto; font-size: 13.5px; color: var(--amber-deep); font-weight: 600; }
+.sw-nav-float {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 6;
+  height: 46px; background: none;
+}
+.sw-nav-float .sw-nav-back { color: #fff; text-shadow: 0 2px 8px rgba(40, 26, 8, .55); }
+
+/* —— Hero —— */
+.sw-hero { position: relative; height: 392px; overflow: hidden; }
+.sw-v2 .sw-hero { height: 420px; }
+.sw-hero .sw-hero-cover { position: absolute; inset: 0; border-radius: 0; height: 100%; }
+
+/* 🔴 两条压暗带。名字在上、作者行在下，只压一头必然有一头读不出来。 */
+.sw-hero-top {
+  position: absolute; left: 0; right: 0; top: 0; height: 210px; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(38, 26, 10, .58) 0%, rgba(38, 26, 10, .26) 46%, transparent 100%);
+}
+.sw-hero-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 168px; pointer-events: none;
+  background: linear-gradient(to top, rgba(38, 26, 10, .66) 0%, rgba(38, 26, 10, .24) 52%, transparent 100%);
+}
+
+.sw-hero-text { position: absolute; top: 58px; left: 20px; right: 20px; }
+.sw-v2 .sw-hero-text { top: 64px; }
+.sw-hero-name {
+  font-size: 30px; font-weight: 800; letter-spacing: 1px; color: #fffaf1;
+  text-shadow: 0 2px 14px rgba(40, 26, 8, .5);
+}
+.sw-hero-sign {
+  margin-top: 7px; font-size: 14px; line-height: 1.6;
+  color: rgba(255, 250, 241, .9); text-shadow: 0 1px 10px rgba(40, 26, 8, .55);
+}
+
+.sw-hero-foot {
+  position: absolute; left: 20px; right: 20px; bottom: 42px;
+  display: flex; align-items: center; gap: 8px;
+}
+.sw-owner-avatar { width: 22px; height: 22px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1.5px rgba(255, 250, 241, .55); }
+.sw-owner-name { font-size: 13px; color: rgba(255, 250, 241, .95); text-shadow: 0 1px 8px rgba(40, 26, 8, .55); }
+.sw-hero-dot { width: 3px; height: 3px; border-radius: 50%; background: rgba(255, 250, 241, .55); }
+.sw-hero-years { font-size: 12.5px; color: rgba(255, 250, 241, .78); letter-spacing: .5px; }
+
+/* W2 暖光在这一屏只出现一次，就在窗自己身上 */
+.sw-hero-warmth {
+  position: absolute; right: 18px; bottom: 38px;
+  padding: 6px 12px 6px 10px; border-radius: 999px;
+  background: rgba(28, 19, 6, .34); backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 233, 190, .28);
+}
+.sw-hero-warmth .wm-text { color: #fbe9c8; font-weight: 600; }
+
+/* —— 正文容器 —— */
+.sw-body { padding: 0 18px 34px; }
+
+/* —— 引言 —— */
+.sw-quote {
+  position: relative; margin: -26px 0 4px; padding: 22px 20px 18px;
+  background: var(--paper); border-radius: 20px;
+  box-shadow: var(--shadow-soft); border: 1px solid rgba(236, 223, 201, .8);
+}
+.sw-quote-mark {
+  position: absolute; top: 4px; left: 14px;
+  font-size: 44px; color: rgba(240, 194, 122, .55); font-family: Georgia, serif; line-height: 1;
+}
+.sw-quote-text { position: relative; font-size: 16px; line-height: 1.85; color: var(--ink); font-weight: 500; }
+.sw-quote-by { margin-top: 10px; font-size: 11.5px; color: var(--ink-3); }
+
+/* —— 章节头 —— */
+.sw-sec-head { display: flex; align-items: baseline; gap: 9px; margin: 30px 0 13px; }
+.sw-sec-title { font-size: 16.5px; font-weight: 700; color: var(--ink); letter-spacing: .3px; }
+.sw-sec-title::before {
+  content: ''; display: inline-block; width: 3px; height: 13px; border-radius: 2px;
+  background: linear-gradient(to bottom, var(--amber-soft), var(--amber));
+  margin-right: 8px; vertical-align: -1px;
+}
+.sw-sec-note { font-size: 11.5px; color: var(--ink-3); }
+.sw-sec-action { margin-left: auto; font-size: 12.5px; color: var(--amber-deep); }
+
+/* —— 横滑条 —— */
+.sw-hscroll {
+  display: flex; gap: 12px; overflow-x: auto;
+  margin: 0 -18px; padding: 2px 18px 6px;
+  scroll-snap-type: x mandatory;
+}
+.sw-hscroll > * { scroll-snap-align: start; flex: none; }
+
+/* 生命之书（W1）：横滑小片，回答「这是谁」，不跟主内容抢纵深 */
+.sw-life-chip {
+  width: 148px; background: var(--paper); border-radius: 16px;
+  border: 1px solid var(--line); overflow: hidden; padding-bottom: 12px;
+}
+.sw-life-chip .sw-life-cover { height: 84px; border-radius: 0; }
+.sw-life-year {
+  display: inline-block; margin: 10px 0 0 12px;
+  font-size: 11px; letter-spacing: 1px; color: var(--amber-deep); font-weight: 700;
+}
+.sw-life-title { margin: 3px 12px 0; font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.sw-life-desc { margin: 5px 12px 0; font-size: 11.5px; line-height: 1.6; color: var(--ink-2); }
+
+/* 生命之书 · 纵向版（v1） */
+.sw-life-list { display: flex; flex-direction: column; gap: 14px; }
+.sw-life-row { display: flex; gap: 13px; align-items: flex-start; }
+.sw-life-row .sw-life-row-cover { width: 74px; height: 74px; border-radius: 14px; flex: none; }
+.sw-life-row-year { font-size: 11px; letter-spacing: 1px; color: var(--amber-deep); font-weight: 700; }
+.sw-life-row-title { margin-top: 2px; font-size: 14.5px; font-weight: 700; color: var(--ink); }
+.sw-life-row-desc { margin-top: 4px; font-size: 12.5px; line-height: 1.65; color: var(--ink-2); }
+
+/* —— B18 公开卡 · 大卡（v2 主内容） —— */
+.sw-cards { display: flex; flex-direction: column; gap: 16px; }
+.sw-card {
+  background: var(--paper); border-radius: 20px; overflow: hidden;
+  border: 1px solid rgba(236, 223, 201, .9); box-shadow: var(--shadow-card);
+}
+/* 🔴 `.sw-card-topic` / `.sw-row-topic` 已随「题材不上封面」一并删除（2026-08-27） */
+.sw-card-cover-wrap { position: relative; }
+.sw-card .sw-card-cover { height: 172px; border-radius: 0; }
+.sw-card-slot { position: absolute; top: 10px; right: 10px; }
+.sw-card-body { padding: 14px 16px 16px; }
+.sw-card-title { font-size: 16px; font-weight: 700; line-height: 1.45; color: var(--ink); }
+.sw-card-excerpt {
+  margin-top: 7px; font-size: 13px; line-height: 1.75; color: var(--ink-2);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.sw-card-date { margin-top: 10px; font-size: 11px; color: var(--ink-3); letter-spacing: .4px; }
+
+.sw-more {
+  display: block; width: 100%; margin-top: 14px; padding: 13px;
+  border-radius: 16px; background: var(--cream-2); border: 1px solid var(--line);
+  font-size: 13.5px; color: var(--amber-deep); font-weight: 600;
+}
+
+/* —— B18 公开卡 · 紧凑行（v1） —— */
+.sw-rows { display: flex; flex-direction: column; gap: 14px; }
+.sw-row {
+  display: flex; gap: 13px; padding: 11px; align-items: flex-start;
+  background: var(--paper); border-radius: 16px; border: 1px solid var(--line);
+}
+.sw-row .sw-row-cover { width: 88px; height: 88px; border-radius: 12px; flex: none; }
+.sw-row-body { min-width: 0; padding-top: 2px; }
+.sw-row-title { font-size: 14.5px; font-weight: 700; color: var(--ink); }
+.sw-row-excerpt {
+  margin-top: 5px; font-size: 12.5px; line-height: 1.65; color: var(--ink-2);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.sw-row-date { margin-top: 7px; font-size: 11px; color: var(--ink-3); }
+
+/* —— 明信片（W11 已解锁位） —— */
+.sw-pc { width: 152px; }
+.sw-pc .sw-pc-cover { height: 108px; border-radius: 14px; }
+.sw-pc-cap { margin-top: 8px; font-size: 12.5px; line-height: 1.55; color: var(--ink); }
+.sw-pc-date { margin-top: 4px; font-size: 10.5px; color: var(--ink-3); letter-spacing: .4px; }
+.sw-pc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.sw-pc-grid .sw-pc { width: auto; }
+
+/* —— B18 空态 —— */
+.sw-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 30px 24px 34px; background: var(--paper);
+  border: 1px dashed var(--line); border-radius: 20px;
+}
+.sw-empty-glow {
+  width: 78px; height: 78px; border-radius: 50%; margin-bottom: 10px;
+  background: radial-gradient(circle at 50% 48%,
+    rgba(255, 233, 187, .95) 0%, rgba(240, 194, 122, .55) 34%, rgba(227, 161, 60, .12) 62%, rgba(227, 161, 60, 0) 78%);
+  filter: blur(2px);
+}
+.sw-empty-title { font-size: 15.5px; font-weight: 700; color: var(--ink); }
+.sw-empty-sub { margin-top: 8px; font-size: 12.5px; line-height: 1.75; color: var(--ink-2); }
+
+/* —— 动作条 —— */
+.sw-actions { display: flex; gap: 11px; margin-top: 32px; }
+.sw-act { flex: 1; padding: 15px 0; border-radius: 18px; font-size: 15px; font-weight: 700; }
+.sw-act-main {
+  color: var(--amber-deep); background: linear-gradient(135deg, rgba(243, 208, 138, .5), rgba(231, 154, 166, .38));
+  border: 1.5px solid var(--amber-soft);
+}
+.sw-act-sub { color: var(--ink-2); background: var(--cream-2); border: 1.5px solid var(--line); }
+.sw-owner-link { margin-top: 18px; text-align: center; font-size: 12.5px; color: var(--ink-3); }
+
+/* ============================================================
+   三、作者视角 · 逐张选择公开范围
+   ============================================================ */
+
+.av-body { padding-top: 4px; }
+.av-head { margin-bottom: 14px; }
+.av-head-title { font-size: 20px; font-weight: 800; color: var(--ink); }
+.av-head-sub { margin-top: 5px; font-size: 12.5px; color: var(--ink-2); }
+.av-head-sub b { color: var(--amber-deep); }
+
+.av-banner {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 13px 14px; margin-bottom: 18px;
+  background: linear-gradient(135deg, rgba(243, 208, 138, .22), rgba(255, 250, 241, .9));
+  border: 1px solid var(--line); border-radius: 16px;
+}
+.av-banner-ico { font-size: 15px; line-height: 1.5; }
+.av-banner-text { font-size: 12.5px; line-height: 1.7; color: var(--ink-2); }
+.av-banner-text b { color: var(--amber-deep); }
+.av-banner-link { display: block; margin-top: 4px; color: var(--amber-deep); font-weight: 600; }
+
+/* 非公开的卡：整张压低存在感，让「哪几张对外」一眼可数 */
+.av-card-private, .av-card-friends { opacity: .72; }
+.av-card-private .sw-card-cover-wrap::after,
+.av-card-friends .sw-card-cover-wrap::after {
+  content: ''; position: absolute; inset: 0;
+  background: rgba(250, 245, 235, .42);
+}
+
+.av-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 11px 6px 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700;
+  background: rgba(255, 250, 241, .92); backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(90, 66, 30, .18);
+}
+.av-chip-ico { font-size: 11px; }
+.av-chip-public { color: var(--amber-deep); }
+.av-chip-friends { color: #6f8557; }
+.av-chip-private { color: var(--ink-2); }
+
+/* —— 底部三档选择器 —— */
+.av-mask { position: absolute; inset: 0; background: rgba(48, 34, 14, .34); z-index: 20; }
+.av-sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 21;
+  background: var(--paper); border-radius: 26px 26px 0 0;
+  padding: 10px 18px 26px; box-shadow: 0 -10px 34px rgba(90, 66, 30, .2);
+}
+.av-sheet-grip { width: 38px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 16px; }
+.av-sheet-title { font-size: 17px; font-weight: 800; color: var(--ink); text-align: center; }
+.av-sheet-card { margin-top: 5px; font-size: 12.5px; color: var(--ink-3); text-align: center; }
+.av-sheet-list { margin-top: 18px; display: flex; flex-direction: column; gap: 9px; }
+.av-opt {
+  display: flex; align-items: flex-start; gap: 11px; text-align: left;
+  padding: 13px 14px; border-radius: 16px;
+  background: var(--cream-2); border: 1.5px solid transparent;
+}
+.av-opt.on { background: linear-gradient(135deg, rgba(243, 208, 138, .38), rgba(255, 250, 241, .9)); border-color: var(--amber-soft); }
+.av-opt.off { opacity: .45; }
+.av-opt-ico { font-size: 16px; line-height: 1.35; }
+.av-opt-main { display: block; min-width: 0; }
+.av-opt-label { display: block; font-size: 14.5px; font-weight: 700; color: var(--ink); }
+.av-opt-hint { display: block; margin-top: 3px; font-size: 11.5px; line-height: 1.6; color: var(--ink-2); }
+.av-opt-tick { margin-left: auto; color: var(--amber-deep); font-weight: 800; }
+.av-sheet-foot { margin-top: 16px; font-size: 11.5px; line-height: 1.7; color: var(--ink-3); text-align: center; }
+
+/* ============================================================
+   三·五、B18 回忆卡的四种卡型
+   ============================================================ */
+
+/* —— 那一行：四种卡型共用 —— */
+.ct-line { display: flex; align-items: center; gap: 10px; }
+.ct-line-text {
+  /* 🔴 `min-width:0` 是这一行能省略的前提。flex 子项默认 `min-width:auto`，
+     不改的话超长标题会把日期整个顶出容器，而不是自己收省略号。 */
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 14.5px; font-weight: 600; letter-spacing: .2px; color: var(--ink);
+}
+.ct-line-date {
+  /* 日期永不参与收缩：它是四种卡型里唯一恒定宽度的锚点 */
+  flex: none; font-size: 11px; letter-spacing: .4px; color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* —— 封面壳 —— */
+.ct-cover { position: relative; overflow: hidden; }
+.ct-cover .ct-cover-img { width: 100%; height: 100%; border-radius: 0; }
+.ct-scrim {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 58%;
+  background: linear-gradient(180deg, transparent 0%, rgba(34, 24, 10, .10) 42%, rgba(30, 21, 8, .62) 100%);
+  pointer-events: none;
+}
+/* 文字压在图上时 AI 标要让位到左上。
+   ⚠️ 必须带 `.ct-cover` 前缀：`.ai-gen-badge.compact` 同为两类选择器且在 app.css 里排在后面，
+   少这一层 `bottom:5px` 会赢，角标被拉成一条贯穿整张封面的暗带，把那行字的头几个字盖掉。 */
+.ct-cover .ai-gen-badge.ct-ai-top { top: 7px; left: 7px; bottom: auto; }
+/* 🔴 `.ct-topic` 已删（裁定 2026-08-27）：主题标签不上卡封面。
+   密度图上它在每张封面同一个位置排成一串深色药丸，且多数卡挂同一个标签 ——
+   占了每张卡固定一个角，换回来的区分度接近零。题材改走列表顶上的筛选器。 */
+
+/* —— 甲 · 图下一行（图 82%）—— */
+.ct-list-a { display: flex; flex-direction: column; gap: 14px; }
+.ct-a {
+  background: var(--paper); border-radius: 20px; overflow: hidden;
+  border: 1px solid rgba(236, 223, 201, .9); box-shadow: var(--shadow-card);
+}
+/* 与丁同高（3:2），好让两者的差别只剩「字在纸上还是压在图上」这一项 */
+.ct-a .ct-a-cover { height: 236px; }
+.ct-a-line { height: 46px; padding: 0 15px; }
+
+/* —— 乙 · 全图压字（图 100%）—— */
+.ct-list-b { display: flex; flex-direction: column; gap: 14px; }
+.ct-b { position: relative; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow-card); }
+.ct-b .ct-b-cover { height: 300px; }
+.ct-b-line { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 16px 15px; }
+.ct-b .ct-line-text { color: #fff; text-shadow: 0 1px 10px rgba(28, 18, 4, .6); font-weight: 700; }
+.ct-b .ct-line-date { color: rgba(255, 250, 240, .78); text-shadow: 0 1px 8px rgba(28, 18, 4, .6); }
+
+/* —— 丙 · 双列相册（图 83%）—— */
+.ct-list-c { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ct-c {
+  background: var(--paper); border-radius: 16px; overflow: hidden;
+  border: 1px solid rgba(236, 223, 201, .9); box-shadow: var(--shadow-card);
+}
+.ct-c .ct-c-cover { aspect-ratio: 1 / 1; }
+.ct-c-line { height: 36px; padding: 0 10px; gap: 6px; }
+.ct-c .ct-line-text { font-size: 12.5px; font-weight: 600; }
+.ct-c .ct-line-date { font-size: 10px; }
+/* 双列里无图的便签要跟方图同高，否则整行错位 */
+.ct-list-c .ct-note-sq { aspect-ratio: 1 / 1.21; }
+
+/* —— 丁 · 大图 + 毛玻璃胶囊（图 100%）—— */
+.ct-list-d { display: flex; flex-direction: column; gap: 14px; }
+.ct-d { position: relative; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow-card); }
+.ct-d .ct-d-cover { height: 236px; }
+.ct-d .ct-scrim { height: 40%; opacity: .55; }
+.ct-d-line {
+  position: absolute; left: 11px; right: 11px; bottom: 11px;
+  height: 42px; padding: 0 14px; border-radius: 14px;
+  /* 🔴 .84 不够：胶囊压到照片的暗部时整块跟着变暗，头一个字就读不出来了。
+     .94 之后无论底下是暗巷还是雪地，胶囊都还是「一张纸」。 */
+  background: rgba(255, 252, 246, .94);
+  backdrop-filter: blur(16px) saturate(130%);
+  box-shadow: 0 4px 16px rgba(40, 27, 8, .22);
+}
+
+/* —— 无图的卡：便签 —— */
+.ct-note {
+  position: relative; display: flex; overflow: hidden;
+  background: linear-gradient(150deg, #fffaf0, #f8efdd);
+  border: 1px solid rgba(236, 223, 201, .95); border-radius: 20px;
+  box-shadow: var(--shadow-card);
+}
+.ct-note-edge {
+  flex: none; width: 4px;
+  background: linear-gradient(to bottom, var(--amber-soft), var(--amber));
+}
+.ct-note-body { flex: 1; min-width: 0; padding: 16px 16px 13px; }
+.ct-note-title {
+  font-size: 14.5px; font-weight: 700; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ct-note-text {
+  margin-top: 7px; font-size: 13px; line-height: 1.8; color: var(--ink-2);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ct-note-foot { display: flex; align-items: center; gap: 8px; margin-top: 11px; }
+/* 🔴 `.ct-note-topic` 同上一并删：便签卡也不出主题标签，否则同一份数据在两种卡上说法不一致 */
+.ct-note-foot .ct-line-date { margin-left: auto; }
+.ct-note-sq .ct-note-body { padding: 13px 12px 11px; }
+.ct-note-sq .ct-note-title { font-size: 12.5px; }
+.ct-note-sq .ct-note-text { font-size: 11.5px; line-height: 1.7; -webkit-line-clamp: 4; }
+
+/* ============================================================
+   三·六、「它的一生」收成一个点
+   ============================================================ */
+
+.lb { margin: 4px 0 0; }
+.lb-bar {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  height: 44px; padding: 0 14px;
+  background: var(--cream-2); border: 1px solid var(--line); border-radius: 14px;
+  text-align: left;
+}
+.lb-open .lb-bar { border-radius: 14px 14px 0 0; border-bottom-color: transparent; background: var(--paper); }
+.lb-dot {
+  flex: none; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--amber); box-shadow: 0 0 0 3px rgba(240, 194, 122, .26);
+}
+.lb-label { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.lb-years { font-size: 11.5px; color: var(--ink-3); letter-spacing: .4px; }
+.lb-count { margin-left: auto; font-size: 11px; color: var(--ink-3); }
+.lb-chev { flex: none; font-size: 12px; color: var(--ink-3); line-height: 1; }
+
+.lb-line {
+  padding: 4px 14px 16px 21px;
+  background: var(--paper); border: 1px solid var(--line); border-top: none;
+  border-radius: 0 0 14px 14px;
+}
+.lb-item { position: relative; display: flex; gap: 11px; padding: 9px 0 9px 14px; }
+/* 竖线只连节点之间，不从头拉到尾 —— 拉满会读成进度条 */
+.lb-item:not(:last-child)::before {
+  content: ''; position: absolute; left: 3px; top: 20px; bottom: -4px;
+  width: 1px; background: linear-gradient(to bottom, rgba(240, 194, 122, .8), rgba(240, 194, 122, .22));
+}
+.lb-node {
+  position: absolute; left: 0; top: 14px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--paper); border: 1.5px solid var(--amber);
+}
+.lb-year {
+  flex: none; width: 34px; font-size: 11px; font-weight: 700; line-height: 1.9;
+  letter-spacing: .5px; color: var(--amber-deep);
+}
+.lb-text { min-width: 0; }
+.lb-title { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.lb-desc { margin-top: 3px; font-size: 12px; line-height: 1.65; color: var(--ink-2); }
+
+/* ============================================================
+   四、出图脚手架
+   ============================================================ */
+
+/* 卡型比稿位：不出 hero，把一屏全留给被比较的那一项；上下文一格没少 */
+.dz-cards-only { padding-top: 18px; }
+
+/* 长条位：390 的真实宽度，只是不受手机屏 844 高的限制，一次能看到更多张。
+   ⚠️ 只用于判断「一列卡累积起来碎不碎」，不代表任何真实设备的一屏。 */
+/* 🔴 `.dz-strip` / `.dz-strip-row` 已删：它们是 chip 密度比稿的临时设施，chip 定了就没用了 */
+
+.dz-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.dz-label { font-size: 13px; font-weight: 700; color: #6b5330; letter-spacing: .3px; }
+.dz-sub { font-size: 11.5px; color: #8a7350; margin-top: -6px; }
+.dz-row { display: flex; align-items: flex-start; gap: 26px; }
+.dz-wrap .stage-caption { display: none; }
+
+/* 暖光三档说明板：不套手机壳，是一张纯说明图 */
+.dz-board {
+  width: 390px; background: var(--cream); border-radius: 26px;
+  padding: 22px 18px 24px; box-shadow: var(--shadow-soft);
+}
+.dz-board h3 { font-size: 15px; color: var(--ink); margin-bottom: 4px; }
+.dz-board p.dz-note { font-size: 11.5px; line-height: 1.7; color: var(--ink-2); margin-bottom: 16px; }
+.dz-board .dz-strike { text-decoration: line-through; color: var(--ink-3); }
+
+/* 把 `.pet-hero` 的对比度修复整个撤销，用来出「修复前」那一张 —— 只在这一个对照页生效 */
+.dz-hero-before .pet-hero::after { display: none; }
+.dz-hero-before .hero-overlay {
+  background: linear-gradient(180deg, rgba(60, 45, 25, .06) 0%, rgba(60, 45, 25, .02) 40%, rgba(60, 45, 25, .28) 100%);
+}
+.dz-hero-before .hero-name { color: #5a4326; text-shadow: 0 2px 10px rgba(255, 250, 240, .5); }
+.dz-hero-before .hero-sign { color: #6b5330; text-shadow: none; }
+.dz-hero-before .temp-label { color: #5a4326; text-shadow: none; }
+.dz-hero-before .temp-num { color: var(--amber-deep); text-shadow: none; }
+.dz-hero-before .visibility { color: #6b5330; text-shadow: none; }

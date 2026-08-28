@@ -1,0 +1,46 @@
+/* 🔴 仅供视觉选型对比的临时样式，随 src/dev/ 一起删。 */
+
+@import '../styles/app.css';
+/* 🔄 `warmthLegacy.css` 已于 2026-08-27 随广场暖光比稿板一起删除 —— 那块板已经没有问题可答了。 */
+
+.vc-page { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+/* 并排：同一批数据、同一个滚动位置，只有被对比的那一处不同 */
+.vc-pair { display: flex; align-items: flex-start; gap: 26px; }
+
+.vc-label {
+  font-size: 13px; font-weight: 700; color: #6b5330;
+  letter-spacing: .3px;
+}
+
+/* 🔴 画框一律保持 390×844 的真实手机一屏，不做拉长/缩放 ——
+   「这一屏有多空 / 层次有多粗」问的就是一屏，撑开画框会让两组对比都失真。 */
+.vc-page .stage-caption { display: none; }
+
+/* —— 陌生人视角的裁剪层（§10.3）——
+   只藏，不改 MineScreen。B5 羁绊温度 / B7 可见性行，两案一致。 */
+.vc-stranger-crop { height: 100%; overflow-y: auto; }
+.vc-stranger-crop .hero-temp,
+.vc-stranger-crop .visibility { display: none; }
+
+/* B 案：整面明信片墙不下发 —— 墙头与格子一并不出 */
+.vc-no-wall .wall-head,
+.vc-no-wall .postcards { display: none; }
+
+/* B 案落在明信片墙原位的温柔空态（形态与文案未定，见组件注释） */
+.vc-gentle-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; text-align: center;
+  padding: 34px 30px 40px; margin: 0 -14px;
+}
+.vc-gentle-glow {
+  width: 84px; height: 84px; border-radius: 50%; margin-bottom: 2px;
+  background: radial-gradient(circle at 40% 35%, #ffe6b0, #f0c27a 55%, rgba(227,161,60,0));
+}
+.vc-gentle-title { font-size: 17px; color: var(--ink); font-weight: 700; }
+.vc-gentle-sub { font-size: 13px; color: var(--ink-2); line-height: 1.7; }
+
+.vc-index { background: var(--paper); padding: 28px 34px; border-radius: 20px; }
+.vc-index h1 { font-size: 18px; margin-bottom: 14px; }
+.vc-index li { margin: 8px 0; font-size: 14px; }
+.vc-index a { color: var(--amber-deep); }

@@ -1,0 +1,43 @@
+/* ============ 设计令牌：低饱和暖调 · 米/奶油/琥珀/柔绿 ============ */
+:root {
+  --cream: #fbf3e6;        /* 主奶油底 */
+  --cream-2: #f6ead6;      /* 次级卡片底 */
+  --paper: #fffaf1;        /* 卡片纸面 */
+  --amber: #e3a13c;        /* 主琥珀（CTA） */
+  --amber-soft: #f0c27a;   /* 柔琥珀 */
+  --amber-deep: #c9822a;   /* 深琥珀（文字强调） */
+  --green-soft: #9cb27e;   /* 柔绿点缀 */
+  --ink: #4a3f30;          /* 主文字（暖褐） */
+  --ink-2: #7c6f5c;        /* 次文字 */
+  --ink-3: #a99a83;        /* 弱文字/占位 */
+  --line: #ecdfc9;         /* 分隔/描边 */
+  --blossom: #e79aa6;      /* 花瓣粉（献花） */
+  --radius: 18px;
+  --radius-lg: 26px;
+  --shadow-soft: 0 8px 26px rgba(150, 120, 70, 0.12);
+  --shadow-card: 0 6px 18px rgba(150, 120, 70, 0.10);
+  --font: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Segoe UI', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  /* 桌面浏览器下的舞台底色，让手机画框居中漂浮 */
+  background: radial-gradient(1200px 800px at 50% -10%, #f3e6cf 0%, #e9dcc4 55%, #ddceb2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  padding: 24px;
+}
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+img { display: block; max-width: 100%; }
+
+::-webkit-scrollbar { width: 0; height: 0; }

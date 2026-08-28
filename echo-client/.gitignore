@@ -1,0 +1,64 @@
+# Unity 工程 .gitignore（基于官方模板）
+# 参考：https://github.com/github/gitignore/blob/main/Unity.gitignore
+
+# Unity 生成目录（不纳入版本控制）
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+
+# WebGL / 移动端构建产物
+/[Bb]uild[Ss]/
+/[Bb]uildOutput/
+
+# Asset meta 数据：仅当对应资产被忽略时才忽略其 .meta
+# （此处不忽略 .meta，保持 Assets 下资产与 meta 同步入库）
+
+# 自动生成的 VS / Rider / IDE 工程文件
+/[Aa]ssets/[Aa]ssetStoreTools*
+/[Aa]ssets/[Pp]lugins/[Ee]ditor/[Jj]etBrains*
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity3D 生成的崩溃报告
+sysinfo.txt
+
+# 构建器生成的可执行文件与库
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# 操作系统杂项
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Gradle / Android 构建中间产物
+/[Aa]ssets/[Ss]treamingAssets/aas/*
+
+# Crashlytics 生成的构建标识
+crashlytics-build.properties

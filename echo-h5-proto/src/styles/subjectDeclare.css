@@ -1,0 +1,44 @@
+/*
+  建档「主体指认」（`SR-6`）低置信度那一屏新增的两处样式。
+
+  ⚠️ **为什么单开一个文件、不并进 `app.css`**：`app.css` 当前由另一条设计线
+  （卡型重做 / 陌生人视角 / 广场暖光）在改，本会话已因共用文件撞过一次车。
+  这里由 `components/OnboardingScreen.tsx` 直接 import，作用域清楚、不与人抢文件。
+  🔴 **等那条线落地后，应当把本文件并回 `app.css` 的 `.onb-subject` 那一段**，
+  免得同一个组件的样式长期散在两处。
+
+  🔴 选择器一律带 `.onb-dream` 前缀，凑到三个类的特异性 —— 这样无论本文件与
+  `app.css` 的 import 顺序如何，都能稳定压过 `app.css` 里的 `.onb-subject-opt.on`。
+  依赖 import 顺序来决定胜负的写法，会在打包器调整顺序时静默失效。
+*/
+
+/*
+  标题下那一行说明。🔴 只在低置信度时出。
+  压得比那一问本身淡：它陈述的是这张素材的状况，不该抢过「这个窗口，是为谁留的？」。
+*/
+.onb-dream .onb-subject-note {
+  margin: -4px 0 12px;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: rgba(240, 225, 200, 0.52);
+}
+
+/*
+  预填项的「待确认」态。
+
+  `app.css` 里的 `.onb-subject-opt.on` 是实心琥珀，读起来像「已经定了」；
+  而低置信度下预填的是系统的猜测，虚线 + 弱填充才读得出「还没定，等你看一眼」。
+
+  🔴 **不做 disabled、不做灰置** —— `app.css` 那一段注释写死了「灰置等于变相报错」。
+  这一颗是**可点、已选中、但标注为待确认**，三件事同时成立。
+  ⚠️ 用户一旦碰过任何一项，这个态就撤掉（组件里 `picked === null` 才加这个类）：
+  他确认过之后再显示「还没定」就是假的。
+*/
+.onb-dream .onb-subject-opt.on.tentative {
+  background: rgba(242, 202, 132, 0.14);
+  border: 1px dashed rgba(245, 205, 140, 0.72);
+  color: rgba(247, 226, 186, 0.92);
+  font-weight: 600;
+  box-shadow: none;
+}

@@ -1,0 +1,55 @@
+# ===== 机密：绝不入库 =====
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# ===== 素材与资源：一律存资源根，见 echo-doc 仓 docs/ASSETS.md =====
+# 下面几条是兜底——物料本该在资源根，若有人手滑放回仓库内也不会入库。
+echo-h5-proto/public/assets/
+echo-h5-proto/public/design-ref/
+*.psd
+*.ai
+*.sketch
+*.fig
+
+# ===== 构建产物 =====
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# ===== 依赖 =====
+node_modules/
+.pnpm-store/
+
+# ===== Unity 生成物（echo-client/ 是冻结的旧工程，见 README）=====
+echo-client/Library/
+echo-client/Temp/
+echo-client/Obj/
+echo-client/Logs/
+echo-client/UserSettings/
+echo-client/Build/
+echo-client/Builds/
+echo-client/MemoryCaptures/
+echo-client/Recordings/
+*.csproj
+*.sln
+*.unityproj
+
+# ===== 日志与临时文件 =====
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# ===== 编辑器 / 系统 =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
