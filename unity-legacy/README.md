@@ -1,4 +1,8 @@
-# Echo 客户端（echo-client）· Unity 工程骨架
+# Echo 客户端 · Unity 工程骨架（已冻结）
+
+> **这个工程已冻结**，自版本控制基线起没有一次实质改动。Echo 当前在开发的前端是
+> 同仓的 `echo-h5-proto/`。本目录 2026-08-29 之前叫 `echo-client/`，与仓库同名，
+> 改名是为了不让人照名字找错地方。下文保留原样，仅把路径改到新位置。
 
 回响 (Echo) 的客户端工程，**先面向 H5 / WebGL**，后续可出移动 App、未来 AR。
 本仓库是一个**结构正确、可被 Unity Hub 直接打开**的工程：内含可运行的
@@ -29,7 +33,7 @@
 ## 2. 用 Unity Hub 打开
 
 1. 打开 **Unity Hub** → `Add` → `Add project from disk`。
-2. 选择本目录 `Echo/echo-client/`。
+2. 选择本目录 `echo-client` 仓的 `unity-legacy/`。
 3. 若提示 Unity 版本不匹配，安装/选择一个 **6000.0.x** 版本打开。
 4. 首次打开 Unity 会联网拉取 `NativeWebSocket`（git UPM 包，见 §3）并编译脚本，请保持联网。
 5. 打开场景 `Assets/Scenes/Bootstrap.unity`，点 **Play** 即开始连接并登录。
@@ -127,7 +131,7 @@ P1 协议体**起步用 JSON**（Aengine `Packet` 支持 `PROTOCOL_JSON`），�
 ## 7. 目录结构
 
 ```
-echo-client/
+unity-legacy/
 ├── README.md                      # 本文件
 ├── .gitignore                     # Unity 官方模板
 ├── Packages/
