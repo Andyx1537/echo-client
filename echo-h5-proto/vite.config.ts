@@ -58,10 +58,13 @@ function externalAssets(assetsRoot: string): Plugin {
 // H5 静态构建：
 // - base 可配（部署到 OSS/COS 子路径时设 VITE_BASE，如 "/echo/"）。
 // - VITE_API_BASE 空 → 走本地 mock；非空 → 走真后端（见 src/api）。
-// - ECHO_ASSETS_DIR 指向仓库外的资源根；缺省取同级 ../../Echo-assets。
+// - ECHO_ASSETS_DIR 指向资源根；缺省取并排克隆的 echo-doc 仓里那份。
+//   2026-08-29 拆仓前缺省是 ../../Echo-assets（单仓时代资源根在代码仓同级）。
+//   拆仓后资源根随 echo-doc 入库，旧缺省会指到工作区里那份遗留副本——
+//   它多半还在，所以不会裂、只会读到过期物料，比直接裂开更难发现。
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '')
-  const assetsRoot = env.ECHO_ASSETS_DIR || path.resolve(process.cwd(), '../../Echo-assets')
+  const assetsRoot = env.ECHO_ASSETS_DIR || path.resolve(process.cwd(), '../../echo-doc/Echo-assets')
 
   return {
     base: env.VITE_BASE || '/',

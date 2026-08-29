@@ -24,16 +24,16 @@ out/
 node_modules/
 .pnpm-store/
 
-# ===== Unity 生成物（echo-client/ 是冻结的旧工程，见 README）=====
-echo-client/Library/
-echo-client/Temp/
-echo-client/Obj/
-echo-client/Logs/
-echo-client/UserSettings/
-echo-client/Build/
-echo-client/Builds/
-echo-client/MemoryCaptures/
-echo-client/Recordings/
+# ===== Unity 生成物（unity-legacy/ 是冻结的旧工程，见 README）=====
+unity-legacy/Library/
+unity-legacy/Temp/
+unity-legacy/Obj/
+unity-legacy/Logs/
+unity-legacy/UserSettings/
+unity-legacy/Build/
+unity-legacy/Builds/
+unity-legacy/MemoryCaptures/
+unity-legacy/Recordings/
 *.csproj
 *.sln
 *.unityproj
