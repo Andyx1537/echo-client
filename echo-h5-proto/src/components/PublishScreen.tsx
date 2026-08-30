@@ -142,6 +142,7 @@ export default function PublishScreen({
       )}
 
       {phase === 'edit' && picked && (
+        <>
         <div className="pub-edit">
           <div className="pub-preview">
             {picked.mediaType === 'video' ? (
@@ -207,15 +208,18 @@ export default function PublishScreen({
           </div>
 
           {err && <p className="pub-err">{err}</p>}
-
-          <div className="pub-actions">
-            <button className="pub-submit" onClick={submit} disabled={busy}>
-              {busy ? '正在提交…' : '发布'}
-            </button>
-            {/* 🔴 这句不能省：不说清楚会先进审核，作者提交后会立刻去广场找它 */}
-            <p className="pub-hint center">发布后会先经过审核，通过了才会出现在广场上。</p>
-          </div>
         </div>
+        {/* 🔴 页脚在滚动区**之外**，不是 sticky 的最后一个子元素。
+            用 sticky 时它会压住「谁能看见」那一栏——实测第一版就是这样，
+            那一栏的标题被切掉半行，看起来像渲染坏了。 */}
+        <div className="pub-actions">
+          <button className="pub-submit" onClick={submit} disabled={busy}>
+            {busy ? '正在提交…' : '发布'}
+          </button>
+          {/* 🔴 这句不能省：不说清楚会先进审核，作者提交后会立刻去广场找它 */}
+          <p className="pub-hint center">发布后会先经过审核，通过了才会出现在广场上。</p>
+        </div>
+        </>
       )}
 
       {phase === 'done' && (

@@ -2138,10 +2138,12 @@
 
 /* ================= 作品发布页 / 作品瀑布（t_work） ================= */
 
-.publish { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--cream); }
+/* 🔴 外层不滚：滚动交给 .pub-pick / .pub-edit，页脚 .pub-actions 留在滚动区之外。
+   页脚若跟着内容滚（哪怕 sticky），会压住「谁能看见」那一栏——实测过。 */
+.publish { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--cream); }
 
 /* —— 选素材（pick 态）—— */
-.pub-pick { padding: 20px 18px 28px; display: flex; flex-direction: column; gap: 14px; }
+.pub-pick { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 18px 28px; display: flex; flex-direction: column; gap: 14px; }
 .pub-dropzone {
   width: 100%; padding: 46px 20px;
   display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -2161,7 +2163,7 @@
 .pub-err { margin: 0 2px; font-size: 12.5px; color: #c26a5a; line-height: 1.6; }
 
 /* —— 填写（edit 态）—— */
-.pub-edit { padding: 16px 18px 32px; display: flex; flex-direction: column; gap: 18px; }
+.pub-edit { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px 20px; display: flex; flex-direction: column; gap: 18px; }
 .pub-preview {
   position: relative; width: 100%;
   border-radius: var(--radius-lg); overflow: hidden;
@@ -2211,12 +2213,12 @@
 }
 
 .pub-actions {
-  /* 🔴 吸底。390×844 上表单本身就装不下，按钮跟着内容走会掉到折线以下——
-     实测第一版就是这样，页面看起来「没有发布入口」，而它其实只是需要往下滚。 */
-  position: sticky; bottom: 0;
-  margin-top: 2px;
-  padding: 12px 0 14px;
-  background: linear-gradient(to bottom, rgba(251,243,230,0) 0%, var(--cream) 22%);
+  /* 🔴 固定页脚，不参与滚动。表单在 390×844 上装不下，按钮跟着内容走会掉出折线；
+     而做成 sticky 又会压住「谁能看见」那一栏——两种错都实测撞过。 */
+  flex-shrink: 0;
+  padding: 10px 18px 14px;
+  background: var(--cream);
+  border-top: 1px solid var(--line);
 }
 .pub-submit {
   width: 100%; padding: 14px; border-radius: 22px;
