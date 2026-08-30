@@ -34,8 +34,17 @@ import type {
   PendingMessage,
   ReactionArrival,
   ReactionKind,
+  Work,
+  PublishWorkInput,
 } from '../types'
 import { cardIdOfArrival } from './arrivals'
+import {
+  freshWorks,
+  mockAuthorWorks,
+  mockFeed,
+  mockPublish,
+  type WorksMockState,
+} from './worksMock'
 import { normalizeQuery, runSearch } from './searchLogic'
 import {
   ApiError,
@@ -153,6 +162,8 @@ interface MockDB {
   publishedEchoes?: WindowEcho[]
   /** 别人对我的卡的回应（未合并的原始行；`PRODUCT-MINDMAP §6.2 B20`，旧缓存可缺省） */
   arrivals?: ReactionArrival[]
+  /** 作品（t_work）。旧缓存可缺省，读取一律走 worksOf() 兜底 */
+  works?: Work[]
 }
 
 const AVATAR_POOL = [
@@ -1101,4 +1112,67 @@ export const mockBackend: EchoBackend = {
     save()
     return { node }
   },
+
+  // ============================================================ 作品（t_work）
+
+  async publishWork(input: PublishWorkInput): Promise<{ work: Work; message: string }> {
+    await delay(240)
+    const d = load()
+    const state = worksState(d)
+    // mock 里 mediaKey 就是 upload 返回的 objectURL 资源 id，直接当地址用
+    const work = mockPublish(state, input, d.accountId, input.mediaKey, input.posterKey ?? '')
+    d.works = state.works
+    save()
+    // 🔴 「已提交」不是「已发布」：落 pending，还要过审，广场上现在还看不到它
+    return { work, message: '已提交，过一会儿就能在广场看到它了。' }
+  },
+
+  async works(cursor): Promise<Paged<Work>> {
+    await delay(120)
+    const all = mockFeed(worksState(load()))
+    return slicePage(all, cursor)
+  },
+
+  async userWorks(userId, cursor): Promise<Paged<Work>> {
+    await delay(120)
+    const d = load()
+    const all = mockAuthorWorks(worksState(d), userId, userId === d.accountId)
+    return slicePage(all, cursor)
+  },
+
+  async workDetail(workId): Promise<{ work: Work }> {
+    await delay(90)
+    const found = worksState(load()).works.find((w) => w.id === workId)
+    if (!found) throw new ApiError(2004, '这个作品找不到了。')
+    return { work: found }
+  },
+
+  async deleteWork(workId): Promise<{ ok: boolean }> {
+    await delay(120)
+    const d = load()
+    const state = worksState(d)
+    // 🔴 mock 这里是真删数组，服务端是软删（G0-1）。对前端行为等价，
+    //    但别照着 mock 去理解后端语义
+    state.works = state.works.filter((w) => w.id !== workId)
+    d.works = state.works
+    save()
+    return { ok: true }
+  },
+}
+
+/** 旧 localStorage 缓存里没有 works 字段，兜底建一份种子，不为此 bump DB_VERSION。 */
+function worksState(d: MockDB): WorksMockState {
+  if (!d.works) {
+    d.works = freshWorks(d.accountId).works
+  }
+  return { works: d.works }
+}
+
+/** 游标 = 下一页起始偏移，与 plaza 同一套（前端只认 nextCursor，不解析其含义）。 */
+function slicePage<T>(all: T[], cursor?: string): Paged<T> {
+  const size = 12
+  const start = Math.max(0, Number(cursor ?? 0) || 0)
+  const items = all.slice(start, start + size)
+  const end = start + items.length
+  return { items, nextCursor: end < all.length ? String(end) : null }
 }

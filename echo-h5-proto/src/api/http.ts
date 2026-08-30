@@ -26,6 +26,7 @@ import type {
   SpectrumNode,
   Visibility,
   Window,
+  Work,
   MuteDuration,
 } from '../types'
 import {
@@ -281,4 +282,13 @@ export const httpBackend: EchoBackend = {
     post<{ node: SpectrumNode }>(
       `/spectrum/shadows/${encodeURIComponent(id)}/integrate`,
     ).then((r) => ({ node: toSpectrumNodeView(r.node) })),
+
+  // 作品（WorksApi）。🔴 这几个方法的字段是照着服务端 WorkView 抄的，
+  // 不是照着渲染需要设计的——广场页反着做的后果见 PRODUCT-IMPLEMENTATION-AUDIT §0b。
+  publishWork: (input) => post<{ work: Work; message: string }>('/works', input),
+  works: (cursor) => get<Paged<Work>>(`/works${pageQuery(cursor)}`),
+  userWorks: (userId, cursor) =>
+    get<Paged<Work>>(`/users/${encodeURIComponent(userId)}/works${pageQuery(cursor)}`),
+  workDetail: (workId) => get<{ work: Work }>(`/works/${encodeURIComponent(workId)}`),
+  deleteWork: (workId) => del<{ ok: boolean }>(`/works/${encodeURIComponent(workId)}`),
 }

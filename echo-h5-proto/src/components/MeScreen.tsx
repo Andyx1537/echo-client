@@ -9,6 +9,8 @@ interface Props {
   me: Me
   pet: MyPet | null
   onOpenSpectrum: () => void
+  /** 打开「我的作品」（t_work） */
+  onOpenWorks: () => void
   /** 绑定/可见性变更后请求父级刷新会话与档案 */
   onRefresh: () => void
 }
@@ -23,7 +25,7 @@ const VISIBILITY_OPTIONS: Array<{ key: Visibility; hint: string }> = [
 ]
 
 /** 我：个人主页 / 光谱入口 / 设置(可见性三档) / 订阅·付费档位 / 账号(游客→绑定) / 被记得回响 */
-export default function MeScreen({ me, pet, onOpenSpectrum, onRefresh }: Props) {
+export default function MeScreen({ me, pet, onOpenSpectrum, onOpenWorks, onRefresh }: Props) {
   // 自己那扇窗的窗口键；暖光块按它取数（`GET /windows/:petId/remember`）
   const myPetId = myWindowPetId(pet)
   const [insights, setInsights] = useState<Insights | null>(null)
@@ -87,6 +89,16 @@ export default function MeScreen({ me, pet, onOpenSpectrum, onRefresh }: Props) 
           </span>
         </div>
       </div>
+
+      {/* —— 我的作品入口（t_work）—— */}
+      <button className="spectrum-entry me-spectrum" onClick={onOpenWorks}>
+        <span className="se-ico">🖼</span>
+        <span className="se-text">
+          <b>我的作品</b>
+          <em>你发出去的照片与视频 · 也能看到它们现在的状态</em>
+        </span>
+        <span className="se-arrow">→</span>
+      </button>
 
       {/* —— 光谱入口 —— */}
       <button className="spectrum-entry me-spectrum" onClick={onOpenSpectrum}>

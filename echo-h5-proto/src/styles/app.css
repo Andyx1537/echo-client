@@ -2135,3 +2135,200 @@
   margin: -8px 2px 18px;
   font-size: 11.5px; color: var(--ink-3); line-height: 1.5;
 }
+
+/* ================= 作品发布页 / 作品瀑布（t_work） ================= */
+
+.publish { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--cream); }
+
+/* —— 选素材（pick 态）—— */
+.pub-pick { padding: 20px 18px 28px; display: flex; flex-direction: column; gap: 14px; }
+.pub-dropzone {
+  width: 100%; padding: 46px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: var(--paper);
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: transform .18s ease, border-color .2s ease;
+}
+.pub-dropzone:active:not(:disabled) { transform: scale(.985); border-color: var(--amber-soft); }
+.pub-dropzone:disabled { opacity: .65; }
+.pub-dz-glyph { font-size: 30px; color: var(--amber); line-height: 1; }
+.pub-dz-title { font-size: 15.5px; font-weight: 600; color: var(--ink); }
+.pub-dz-sub { font-size: 12.5px; color: var(--ink-3); }
+.pub-hint { margin: 0 2px; font-size: 12.5px; color: var(--ink-3); line-height: 1.6; }
+.pub-hint.center { text-align: center; margin-top: 10px; }
+.pub-err { margin: 0 2px; font-size: 12.5px; color: #c26a5a; line-height: 1.6; }
+
+/* —— 填写（edit 态）—— */
+.pub-edit { padding: 16px 18px 32px; display: flex; flex-direction: column; gap: 18px; }
+.pub-preview {
+  position: relative; width: 100%;
+  border-radius: var(--radius-lg); overflow: hidden;
+  background: #e9ddc6; box-shadow: var(--shadow-card);
+}
+.pub-media { display: block; width: 100%; max-height: 320px; object-fit: cover; }
+.pub-duration {
+  position: absolute; right: 10px; top: 10px;
+  padding: 3px 8px; border-radius: 10px;
+  background: rgba(40, 32, 20, .55); color: #fff;
+  font-size: 11.5px; font-variant-numeric: tabular-nums;
+}
+.pub-ai { position: absolute; left: 10px; bottom: 10px; }
+.pub-repick {
+  position: absolute; right: 10px; bottom: 10px;
+  padding: 5px 12px; border-radius: 13px;
+  background: rgba(255, 250, 241, .92); color: var(--amber-deep);
+  font-size: 12.5px; font-weight: 600;
+}
+
+.pub-field { display: flex; flex-direction: column; gap: 7px; }
+.pub-label {
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 0 2px;
+}
+.pub-count { font-style: normal; font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.pub-input, .pub-textarea {
+  width: 100%; padding: 12px 14px;
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--ink);
+  font-size: 15px; font-family: var(--font); line-height: 1.6;
+}
+.pub-textarea { resize: none; }
+.pub-input::placeholder, .pub-textarea::placeholder { color: var(--ink-3); }
+.pub-input:focus, .pub-textarea:focus { outline: none; border-color: var(--amber-soft); }
+
+.pub-vis { display: flex; gap: 8px; }
+.pub-vis-item {
+  flex: 1; padding: 10px 4px; border-radius: 14px;
+  background: var(--paper); border: 1px solid var(--line);
+  font-size: 13px; color: var(--ink-2);
+  transition: all .2s ease;
+}
+.pub-vis-item.on {
+  background: var(--amber-soft); border-color: var(--amber);
+  color: #5a3d14; font-weight: 600;
+}
+
+.pub-actions {
+  /* 🔴 吸底。390×844 上表单本身就装不下，按钮跟着内容走会掉到折线以下——
+     实测第一版就是这样，页面看起来「没有发布入口」，而它其实只是需要往下滚。 */
+  position: sticky; bottom: 0;
+  margin-top: 2px;
+  padding: 12px 0 14px;
+  background: linear-gradient(to bottom, rgba(251,243,230,0) 0%, var(--cream) 22%);
+}
+.pub-submit {
+  width: 100%; padding: 14px; border-radius: 22px;
+  background: var(--amber); color: #fff;
+  font-size: 16px; font-weight: 600;
+  box-shadow: 0 6px 18px rgba(227, 161, 60, .3);
+  transition: transform .18s ease, opacity .2s ease;
+}
+.pub-submit:active:not(:disabled) { transform: scale(.98); }
+.pub-submit:disabled { opacity: .6; box-shadow: none; }
+.pub-submit.ghost {
+  background: var(--cream-2); color: var(--amber-deep);
+  box-shadow: none; border: 1px solid var(--line);
+}
+
+/* —— 已提交（done 态）—— */
+.pub-done {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; padding: 40px 34px;
+}
+.pub-done-glow {
+  width: 62px; height: 62px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(240,194,122,.75), rgba(240,194,122,0) 70%);
+  margin-bottom: 6px;
+}
+.pub-done-title { margin: 0; font-size: 19px; font-weight: 600; color: var(--ink); }
+.pub-done-sub {
+  margin: 0 0 18px; font-size: 13.5px; color: var(--ink-3);
+  line-height: 1.7; text-align: center;
+}
+
+/* ================= 作品瀑布 ================= */
+
+.works { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--cream); }
+.works-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 52px 18px 12px;
+  font-size: 17px; font-weight: 600; color: var(--ink);
+  flex-shrink: 0;
+}
+.works-new {
+  padding: 6px 14px; border-radius: 15px;
+  background: var(--amber-soft); color: #5a3d14;
+  font-size: 13px; font-weight: 600;
+}
+
+.works-grid { display: flex; gap: 10px; padding: 4px 14px 18px; align-items: flex-start; }
+.works-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+
+.wk-card {
+  display: block; width: 100%; text-align: left;
+  background: var(--paper); border-radius: var(--radius);
+  overflow: hidden; box-shadow: var(--shadow-card);
+  transition: transform .18s ease;
+}
+.wk-card:active { transform: scale(.985); }
+/* padding-top 由 JS 按真实宽高算，所以这里不写死比例 */
+.wk-cover { position: relative; width: 100%; background: #e9ddc6; }
+.wk-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.wk-play {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(40, 32, 20, .42); color: #fff; font-size: 12px;
+  padding-left: 2px;
+}
+.wk-ai { position: absolute; left: 7px; bottom: 7px; }
+.wk-status {
+  position: absolute; right: 7px; top: 7px;
+  padding: 3px 8px; border-radius: 10px;
+  background: rgba(255, 250, 241, .93); color: var(--amber-deep);
+  font-size: 11px; font-weight: 600;
+}
+.wk-body { padding: 9px 11px 12px; }
+.wk-title {
+  margin: 0 0 3px; font-size: 13.5px; font-weight: 600;
+  color: var(--ink); line-height: 1.45;
+}
+.wk-excerpt {
+  margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+.works-more {
+  margin: 4px auto 20px; padding: 9px 22px; border-radius: 18px;
+  background: var(--cream-2); border: 1px solid var(--line);
+  font-size: 13px; color: var(--amber-deep);
+}
+.works-end { margin: 2px auto 22px; font-size: 12px; color: var(--ink-3); }
+
+.works-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px; padding: 30px 34px 80px;
+}
+.works-empty-title { margin: 0; font-size: 16px; font-weight: 600; color: var(--ink); }
+.works-empty-sub {
+  margin: 0 0 16px; font-size: 13px; color: var(--ink-3);
+  line-height: 1.7; text-align: center;
+}
+
+/* 作品页的「广场 / 我的」分段器 */
+.works-scope {
+  display: flex; gap: 6px; padding: 0 16px 10px; flex-shrink: 0;
+}
+.works-scope button {
+  padding: 6px 16px; border-radius: 15px;
+  font-size: 13.5px; color: var(--ink-2);
+  background: var(--cream-2); border: 1px solid transparent;
+  transition: all .2s ease;
+}
+.works-scope button.on {
+  background: var(--paper); border-color: var(--line);
+  color: var(--amber-deep); font-weight: 600;
+}

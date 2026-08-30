@@ -27,6 +27,8 @@ import type {
   UserProfile,
   Visibility,
   Window,
+  Work,
+  PublishWorkInput,
   MuteDuration,
   SpectrumNodeView,
   ShadowAreaView,
@@ -272,6 +274,16 @@ export interface EchoBackend {
   spectrum(): Promise<{ nodes: SpectrumNodeView[]; shadows: ShadowAreaView[] }>
   spectrumAnchor(label: string): Promise<SpectrumNodeView>
   spectrumIntegrate(id: string): Promise<{ node: SpectrumNodeView }>
+
+  // 12. 作品（t_work / WorksApi）。补的是主线第 10 步：此前服务端没有任何发布入口。
+  /** 发布作品。🔴 成功回执是「已提交」不是「已发布」——落库为 pending，还要过审 */
+  publishWork(input: PublishWorkInput): Promise<{ work: Work; message: string }>
+  /** 作品瀑布 */
+  works(cursor?: string): Promise<Paged<Work>>
+  /** 个人作品页。自己看自己时会带上 status/visibility */
+  userWorks(userId: string, cursor?: string): Promise<Paged<Work>>
+  workDetail(workId: string): Promise<{ work: Work }>
+  deleteWork(workId: string): Promise<{ ok: boolean }>
 }
 
 /**

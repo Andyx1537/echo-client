@@ -14,6 +14,8 @@ import SpectrumScreen from './components/SpectrumScreen'
 import OnboardingScreen from './components/OnboardingScreen'
 import SearchScreen from './components/SearchScreen'
 import UserProfileScreen from './components/UserProfileScreen'
+import PublishScreen from './components/PublishScreen'
+import WorksFeedScreen from './components/WorksFeedScreen'
 import type { FeedOpenContext } from './components/PlazaScreen'
 import { api, bootstrap, hasUnread, IS_MOCK, loadInbox, track } from './api'
 import {
@@ -68,6 +70,10 @@ export default function App() {
   const [hasUnreadMsg, setHasUnreadMsg] = useState(false)
   // —— 搜索页（附录 A）：广场入口打开、题材聚合复用广场 category 过滤 ——
   const [searchOpen, setSearchOpen] = useState(false)
+  // —— 作品域（t_work）——
+  // publishOpen 为浮层；worksOpen 是「我的作品」页，也走浮层（底签已满五个，不再加）
+  const [publishOpen, setPublishOpen] = useState(false)
+  const [worksOpen, setWorksOpen] = useState(false)
   const [plazaCategory, setPlazaCategory] = useState<NonNullable<Window['category']> | null>(null)
 
   // —— 进窗后连续下翻的「流上下文」（定案 D21 / 验收 TC-13）——
@@ -310,6 +316,21 @@ export default function App() {
 
   // —— 全屏浮层（优先级从高到低） ——
   const renderOverlay = () => {
+    // 🔴 发布页排在最前：它可能从「我的作品」页里点开，排在后面会被那一屏盖住
+    if (publishOpen) {
+      return <PublishScreen onClose={() => setPublishOpen(false)} />
+    }
+    if (worksOpen) {
+      return (
+        <WorksFeedScreen
+          authorId={me?.accountId}
+          self
+          title="我的作品"
+          onBack={() => setWorksOpen(false)}
+          onOpenPublish={() => setPublishOpen(true)}
+        />
+      )
+    }
     if (spectrumOpen) return <SpectrumScreen onBack={() => setSpectrumOpen(false)} />
 
     if (reelFriend) {
@@ -450,6 +471,7 @@ export default function App() {
             me={me}
             pet={pet}
             onOpenSpectrum={() => setSpectrumOpen(true)}
+            onOpenWorks={() => setWorksOpen(true)}
             onRefresh={async () => {
               await refreshMe()
               await refreshPet()

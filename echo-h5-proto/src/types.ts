@@ -613,3 +613,95 @@ export const VISIBILITY_LABELS: Record<Visibility, string> = {
   friends: '挚友可见',
   public: '公开',
 }
+
+// ============================================================== 作品（t_work）
+
+/**
+ * 一条作品。服务端 `WorkView.listItem` / `detail` 的下发形状。
+ *
+ * 🔴 **作品不是回忆卡。** 回忆卡是私域产物——AI 生成的近况、随手记、生命之书页，
+ * 用户什么都不做它也会长出来；作品是公开物，每一条都对应一次明确的作者意图
+ * （挑素材、写字、按发布）。两者由 `fromCard` 连接：作者把一张回忆卡发出去就长出一个作品。
+ *
+ * ⚠️ **这套字段是照着服务端 `WorkView` 逐个抄下来的，不是照着渲染需要设计的。**
+ * 广场页（`Window`）就是反过来做的，结果两边只有四个字段对得上，
+ * 而因为前端默认跑 mock，这个不一致至今没暴露——见 `PRODUCT-IMPLEMENTATION-AUDIT §0b`。
+ * 🔴 改这里的任何字段，先去改 `WorkView.java`。
+ */
+export interface Work {
+  id: string
+  authorId: string
+  mediaType: WorkMediaType
+  /** 素材直链。服务端由 resourceId 换算，前端不拼路径 */
+  mediaUrl: string
+  /** 视频首帧。🔴 图片作品是空串，不要回退成 mediaUrl——那会让列表页直接加载视频流 */
+  posterUrl: string
+  durationMs: number
+  /**
+   * 原始宽高。瀑布流的高低错落由前端按它算，
+   * 服务端刻意不给 'tall'/'short' 档位（档位会把布局焊进数据）。
+   */
+  width: number
+  height: number
+  title: string
+  /** 正文摘要（40 字）。全文只在详情里给 */
+  excerpt: string
+  topicIds: string[]
+  publishedAt: number | null
+  /** 🔴 AI 生成标识（S-8 显式标识）。列表每一条上都要渲染，不是只在详情页 */
+  aiGenerated: boolean
+  /** 是否由回忆卡发布而来 */
+  fromCard: boolean
+  /** 以下三项只在作者本人视角下发 */
+  status?: WorkStatus
+  visibility?: Visibility
+  sourceCardId?: string | null
+  /** 仅详情 */
+  body?: string
+  createdAt?: number
+}
+
+export type WorkMediaType = 'image' | 'video'
+
+/**
+ * 作品状态。
+ *
+ * 🔴 `pending` 是发布后的**正常**状态，不是异常。`OM3` 定死了生成/发布/过审是三个时刻，
+ * 所以按下发布之后它先进审核，广场上还看不到——文案要写「已提交」不能写「已发布」。
+ */
+export type WorkStatus =
+  | 'draft'
+  | 'pending'
+  | 'public'
+  | 'rejected'
+  | 'takendown'
+  | 'appealing'
+  | 'deleted'
+
+/** 发布作品的入参。字段名与服务端 `WorksApi.publish` 逐个对应。 */
+export interface PublishWorkInput {
+  mediaType: WorkMediaType
+  /** POST /upload 返回的 resourceId */
+  mediaKey: string
+  /** 视频必填 */
+  posterKey?: string
+  durationMs?: number
+  width?: number
+  height?: number
+  title?: string
+  body?: string
+  visibility?: Visibility
+  /** 从回忆卡发布时带上 */
+  sourceCardId?: string
+  aiGenerated?: boolean
+}
+
+export const WORK_STATUS_LABELS: Record<WorkStatus, string> = {
+  draft: '草稿',
+  pending: '审核中',
+  public: '已公开',
+  rejected: '未通过',
+  takendown: '已下架',
+  appealing: '申诉中',
+  deleted: '已删除',
+}
