@@ -275,7 +275,7 @@ export const httpOnboardingApi: OnboardingApi = {
   create: async (petName) => {
     const snapshot = await request<OnboardingSnapshot>(
       '/pet/onboarding',
-      json('POST', { flowVersion: '1', questionnaireVersion: '1', petName }),
+      json('POST', { flowVersion: 'v1', questionnaireVersion: 'v1', petName }),
       true,
     )
     return normalizeDetail(await request(`/pet/onboarding/${encodeURIComponent(snapshot.onboardingId)}`, json('GET')))

@@ -28,6 +28,22 @@ afterEach(() => {
 })
 
 describe('Onboarding v1 HTTP consumer contract', () => {
+  it('creates the session and answers against the same v1 questionnaire contract', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response(snapshot))
+      .mockResolvedValueOnce(response(detail()))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await httpOnboardingApi.create('麦麦')
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(init.body as string)).toEqual({
+      flowVersion: 'v1',
+      questionnaireVersion: 'v1',
+      petName: '麦麦',
+    })
+  })
+
   it('normalizes backend question IDs and keeps candidateId as the only candidate identity', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(detail({
       answers: [{ questionId: 'Q1' as 'q1', answerCodes: ['home'], answerVersion: 'v1' }],
