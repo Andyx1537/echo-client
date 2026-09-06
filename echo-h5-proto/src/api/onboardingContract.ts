@@ -238,15 +238,17 @@ async function request<T>(path: string, init: RequestInit = {}, idempotent = fal
 }
 
 function normalizeDetail(raw: OnboardingDetail): OnboardingDetail {
+  const apiBase = API_BASE.replace(/\/$/, '')
+  const apiUrl = (url?: string) => url && url.startsWith('/') && apiBase ? `${apiBase}${url}` : url
   return {
     ...raw,
-    assets: raw.assets ?? [],
+    assets: (raw.assets ?? []).map((asset) => ({ ...asset, url: apiUrl(asset.url) })),
     subjectCandidates: raw.subjectCandidates ?? [],
     answers: (raw.answers ?? []).map((answer) => ({
       ...answer,
       questionId: answer.questionId.toLowerCase() as QuestionId,
     })),
-    candidates: raw.candidates ?? [],
+    candidates: (raw.candidates ?? []).map((candidate) => ({ ...candidate, imageUrl: apiUrl(candidate.imageUrl) })),
     memoryUseConsent: raw.memoryUseConsent ?? { granted: false, consentVersion: 0 },
   }
 }
