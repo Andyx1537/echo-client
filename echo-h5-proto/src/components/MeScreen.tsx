@@ -225,7 +225,7 @@ export default function MeScreen({ me, pet, onOpenSpectrum, onOpenWorks, onRefre
         {me.isGuest ? (
           <>
             <p className="me-card-sub">
-              想永久留住它、跨设备、接收它的近况？绑定后游客态的一切都会无缝继承。
+              想跨设备继续使用？新手机号会保留当前资料；若切换到已有账号，当前资料不会迁移。
             </p>
             <div className="me-bind-row">
               <button className="me-bind phone" onClick={() => void bind()} disabled={binding}>

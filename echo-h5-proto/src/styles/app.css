@@ -11,6 +11,94 @@
   box-shadow: 0 30px 70px rgba(80, 60, 30, 0.35), 0 0 0 2px rgba(255, 255, 255, 0.06) inset;
 }
 
+.phone-login-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(38, 31, 23, 0.48);
+  backdrop-filter: blur(3px);
+}
+
+.phone-login-dialog {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  width: min(360px, calc(100vw - 40px));
+  padding: 26px 22px 22px;
+  border: 1px solid rgba(165, 124, 68, 0.2);
+  border-radius: 22px;
+  color: #34291f;
+  background: #fffaf1;
+  box-shadow: 0 22px 70px rgba(42, 32, 20, 0.28);
+}
+
+.phone-login-dialog h2,
+.phone-login-dialog p {
+  margin: 0;
+}
+
+.phone-login-dialog p {
+  color: #75685b;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.phone-login-dialog input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid #dfd2c0;
+  border-radius: 12px;
+  outline: none;
+  color: #34291f;
+  background: #fff;
+  font-size: 16px;
+}
+
+.phone-login-dialog input:focus {
+  border-color: #c89042;
+  box-shadow: 0 0 0 3px rgba(200, 144, 66, 0.15);
+}
+
+.phone-login-dialog > button:not(.phone-login-close) {
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  color: #332719;
+  background: linear-gradient(135deg, #f0c978, #dca653);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.phone-login-dialog > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.phone-login-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  color: #75685b;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.phone-login-dialog [role="alert"] {
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #9b3f31;
+  background: #fff0eb;
+}
+
 .phone-notch {
   position: absolute;
   top: 12px; left: 50%; transform: translateX(-50%);
