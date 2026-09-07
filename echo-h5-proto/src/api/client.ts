@@ -4,9 +4,15 @@
 
 import type { Me, Session } from '../types'
 import type { EchoBackend } from './backend'
+import { authApi } from './auth'
+import { applyDeviceSession } from './authContract'
+import {
+  clearBootstrapOperation,
+  getActiveDeviceCredential,
+  getOrCreateBootstrapOperation,
+} from './authCredentialStore'
 import { httpBackend } from './http'
 import { mockBackend } from './mock'
-import { getDeviceId } from './deviceId'
 import { getSession, setSession } from './session'
 import { track } from './track'
 
@@ -17,22 +23,27 @@ export const IS_MOCK = !((import.meta.env.VITE_API_BASE as string | undefined)?.
 export const api: EchoBackend = IS_MOCK ? mockBackend : httpBackend
 
 /**
- * 启动引导：确保拿到游客身份（首次 POST /auth/guest），再取 /me。
- * token 存 localStorage，deviceId 为前端稳定指纹。幂等：已有会话则直接复用。
+ * 无活动会话时，用服务端签发的不透明设备凭据领取匿名会话，再取 /me。
+ * bootstrapNonce 与幂等键在同一次未决请求中保持稳定；客户端从不由设备信息推导账号。
  */
 export async function bootstrap(): Promise<{ session: Session; me: Me }> {
   let session = getSession()
   if (!session) {
-    const deviceId = getDeviceId()
-    session = await api.authGuest(deviceId)
-    setSession(session)
-    track('guest_created', { deviceId })
+    const operation = getOrCreateBootstrapOperation()
+    const deviceCredential = getActiveDeviceCredential() ?? undefined
+    const result = await authApi.deviceSession(
+      deviceCredential ? { deviceCredential } : { bootstrapNonce: operation.bootstrapNonce },
+      operation.idempotencyKey,
+    )
+    session = applyDeviceSession(result)
+    clearBootstrapOperation()
+    track('guest_created', { credentialAction: result.deviceCredentialAction })
   }
   // 拉取账号概要（hasPet 决定是否进建档）
   const me = await api.me()
   // 会话里的 hasPet 以 /me 为准
-  if (me.hasPet !== session.hasPet) {
-    session = { ...session, hasPet: me.hasPet }
+  if (me.hasPet !== session.hasPet || me.isGuest !== session.isGuest || me.accountId !== session.accountId) {
+    session = { ...session, accountId: me.accountId, isGuest: me.isGuest, hasPet: me.hasPet }
     setSession(session)
   }
   return { session, me }

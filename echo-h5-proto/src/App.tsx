@@ -305,6 +305,7 @@ export default function App() {
       <PhoneFrame>
         <PrivateOnboardingScreen
           onComplete={onboardingDone}
+          onIdentityChanged={async () => { await refreshMe() }}
           onSkip={() => {
             setPhase('app')
             setTab('home')

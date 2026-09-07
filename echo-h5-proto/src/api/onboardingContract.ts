@@ -1,4 +1,4 @@
-import { getSession, setSession } from './session'
+import { getSession } from './session'
 
 export type OnboardingStatus =
   | 'collecting'
@@ -119,27 +119,6 @@ export interface OnboardingDetail {
 
 export type QuestionId = 'q1' | 'q2' | 'q3' | 'q4'
 
-export interface PhoneChallenge {
-  challengeId: string
-  expiresAt: number
-  resendAvailableAt: number
-}
-
-export interface PhoneResolution {
-  resolution: 'bind_current' | 'switch_existing'
-  resolutionToken: string
-  resolutionExpiresAt: number
-}
-
-export interface PhoneResolutionResult {
-  accountId: string
-  phoneBound: true
-  sessionToken: string
-  deviceCredential: null
-  returnToAllowed: boolean
-  nextAction?: string
-}
-
 export interface OnboardingErrorData {
   retryable?: boolean
   currentSnapshot?: OnboardingSnapshot
@@ -171,9 +150,6 @@ export interface OnboardingApi {
   refine(id: string, candidateId: string, adjustmentCode: string, version: number): Promise<OnboardingDetail>
   confirm(id: string, candidateId: string, consentVersion: number, version: number): Promise<OnboardingDetail>
   abandon(id: string, version: number): Promise<OnboardingDetail>
-  createPhoneChallenge(phone: string): Promise<PhoneChallenge>
-  verifyPhoneChallenge(challengeId: string, code: string): Promise<PhoneResolution>
-  confirmPhoneResolution(resolutionToken: string): Promise<PhoneResolutionResult>
 }
 
 interface Envelope<T> {
@@ -306,23 +282,4 @@ export const httpOnboardingApi: OnboardingApi = {
     refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}/confirm`, json('POST', { candidateId, consentVersion, expectedSessionVersion }), true)),
   abandon: (id, expectedSessionVersion) =>
     refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}`, json('DELETE', { expectedSessionVersion }), true)),
-  createPhoneChallenge: (phone) =>
-    request('/auth/phone/challenges', json('POST', { phone, purpose: 'login_or_bind' }), true),
-  verifyPhoneChallenge: (challengeId, code) =>
-    request(`/auth/phone/challenges/${encodeURIComponent(challengeId)}/verify`, json('POST', { code }), true),
-  confirmPhoneResolution: async (resolutionToken) => {
-    const result = await request<PhoneResolutionResult>(
-      `/auth/phone/resolutions/${encodeURIComponent(resolutionToken)}/confirm`,
-      json('POST'),
-      true,
-    )
-    const previous = getSession()
-    setSession({
-      token: result.sessionToken,
-      accountId: result.accountId,
-      isGuest: false,
-      hasPet: previous?.hasPet ?? false,
-    })
-    return result
-  },
 }

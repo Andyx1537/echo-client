@@ -1,11 +1,10 @@
-import { getSession, setSession } from './session'
+import { getSession } from './session'
 import type {
   MemoryUseConsent,
   OnboardingApi,
   OnboardingCandidate,
   OnboardingDetail,
   OnboardingSnapshot,
-  PhoneResolution,
   SubjectCandidate,
 } from './onboardingContract'
 import { OnboardingApiError } from './onboardingContract'
@@ -18,11 +17,10 @@ interface MockSession extends OnboardingDetail {
 
 interface MockStore {
   sessions: Record<string, MockSession>
-  challenges: Record<string, { phone: string; resolution?: PhoneResolution }>
 }
 
 function initialStore(): MockStore {
-  return { sessions: {}, challenges: {} }
+  return { sessions: {} }
 }
 
 function readStore(): MockStore {
@@ -167,6 +165,7 @@ export const mockOnboardingApi: OnboardingApi = {
     const store = readStore()
     const detail = getMutable(store, onboardingId)
     settleJob(detail)
+    if (detail.snapshot.status === 'ready_to_bind' && !(getSession()?.isGuest ?? true)) updateReadiness(detail)
     detail.snapshot.allowedActions = allowed(detail)
     writeStore(store)
     return clone(detail)
@@ -331,59 +330,4 @@ export const mockOnboardingApi: OnboardingApi = {
     return clone(detail)
   },
 
-  async createPhoneChallenge(phone) {
-    if (!/^1\d{10}$/.test(phone.replace(/\s/g, ''))) throw new OnboardingApiError('phone_invalid', '请检查手机号是否完整')
-    const store = readStore()
-    const challengeId = id('challenge')
-    store.challenges[challengeId] = { phone }
-    writeStore(store)
-    return { challengeId, expiresAt: Date.now() + 300_000, resendAvailableAt: Date.now() + 60_000 }
-  },
-
-  async verifyPhoneChallenge(challengeId, code) {
-    const store = readStore()
-    const challenge = store.challenges[challengeId]
-    if (!challenge) throw new OnboardingApiError('challenge_expired', '验证码已经过期，请重新获取')
-    if (code !== '123456') throw new OnboardingApiError('code_invalid', '验证码不太对，请再看一眼')
-    const resolution: PhoneResolution = {
-      resolution: challenge.phone.endsWith('0000') ? 'switch_existing' : 'bind_current',
-      resolutionToken: id('resolution'),
-      resolutionExpiresAt: Date.now() + 600_000,
-    }
-    challenge.resolution = resolution
-    store.challenges[resolution.resolutionToken] = challenge
-    writeStore(store)
-    return resolution
-  },
-
-  async confirmPhoneResolution(resolutionToken) {
-    const store = readStore()
-    const challenge = store.challenges[resolutionToken]
-    if (!challenge?.resolution) throw new OnboardingApiError('resolution_expired', '这次确认已经过期，请重新验证')
-    const switched = challenge.resolution.resolution === 'switch_existing'
-    const previous = getSession()
-    const accountId = switched ? `account-${challenge.phone.slice(-4)}` : previous?.accountId ?? id('account')
-    const result = {
-      accountId,
-      phoneBound: true as const,
-      sessionToken: id('token'),
-      deviceCredential: null,
-      returnToAllowed: !switched,
-      nextAction: switched ? 'restart_in_existing_account' : undefined,
-    }
-    setSession({ token: result.sessionToken, accountId, isGuest: false, hasPet: previous?.hasPet ?? false })
-    if (!switched) {
-      for (const detail of Object.values(store.sessions)) {
-        if (detail.snapshot.status === 'ready_to_bind') {
-          detail.snapshot.accountId = accountId
-          detail.snapshot.status = 'ready_to_generate'
-          detail.snapshot.currentStep = 'generate'
-          touch(detail)
-        }
-      }
-    }
-    delete store.challenges[resolutionToken]
-    writeStore(store)
-    return result
-  },
 }

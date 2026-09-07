@@ -6,11 +6,11 @@ import {
   type OnboardingAnswer,
   type OnboardingCandidate,
   type OnboardingDetail,
-  type PhoneChallenge,
-  type PhoneResolution,
   type QuestionId,
   type SubjectCandidate,
 } from '../api/onboardingContract'
+import { usePhoneLogin } from './PhoneLoginCoordinator'
+import { afterIdentityRefresh } from '../lib/phoneLoginFlow'
 import {
   ONBOARDING_QUESTIONS,
   canPerform,
@@ -24,6 +24,7 @@ import '../styles/privateOnboarding.css'
 interface Props {
   onComplete: (petId: string) => void
   onSkip: () => void
+  onIdentityChanged: () => Promise<void>
 }
 
 const ACTIVE_KEY = 'echo.private-onboarding.active.v1'
@@ -60,7 +61,7 @@ function candidateStyle(candidate: OnboardingCandidate): React.CSSProperties {
   return { background: candidate.gradient || 'linear-gradient(145deg,#d8c0ad,#efe0ca)' }
 }
 
-export default function PrivateOnboardingScreen({ onComplete, onSkip }: Props) {
+export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentityChanged }: Props) {
   const [detail, setDetail] = useState<OnboardingDetail | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -72,10 +73,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip }: Props) {
   const [pickedSubject, setPickedSubject] = useState<SubjectCandidate | null>(null)
   const [crop, setCrop] = useState<CropValue>(DEFAULT_CROP)
   const [localPreview, setLocalPreview] = useState<string | null>(null)
-  const [phone, setPhone] = useState('')
-  const [code, setCode] = useState('')
-  const [challenge, setChallenge] = useState<PhoneChallenge | null>(null)
-  const [resolution, setResolution] = useState<PhoneResolution | null>(null)
+  const { login } = usePhoneLogin()
   const mounted = useRef(true)
 
   async function createFresh(): Promise<OnboardingDetail> {
@@ -423,31 +421,20 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip }: Props) {
   )
 
   if (view === 'binding') {
-    async function sendCode(): Promise<void> {
-      setBusy(true); setError(null)
-      try { setChallenge(await onboardingApi.createPhoneChallenge(phone.replace(/\s/g, ''))) }
-      catch (cause) { setError(errorMessage(cause)) }
-      finally { setBusy(false) }
-    }
-    async function verifyCode(): Promise<void> {
-      if (!challenge) return
-      setBusy(true); setError(null)
-      try { setResolution(await onboardingApi.verifyPhoneChallenge(challenge.challengeId, code)) }
-      catch (cause) { setError(errorMessage(cause)) }
-      finally { setBusy(false) }
-    }
     async function resolveIdentity(): Promise<void> {
-      if (!resolution) return
       setBusy(true); setError(null)
       try {
-        const result = await onboardingApi.confirmPhoneResolution(resolution.resolutionToken)
-        if (result.returnToAllowed) {
-          const restored = await onboardingApi.get(snapshot.onboardingId)
+        const outcome = await login({ intent: 'private_onboarding_generation', resourceId: snapshot.onboardingId, schemaVersion: 'v1' })
+        if (!outcome) return
+        if (outcome.result.returnToAllowed && outcome.result.nextAction === 'resume_private_onboarding') {
+          const restored = await afterIdentityRefresh(onIdentityChanged, () => onboardingApi.get(snapshot.onboardingId))
           setDetail(restored)
           setNotice('已经安全回到刚才的资料，可以继续生成。')
         } else {
-          storeActive(null)
-          const fresh = await createFresh()
+          const fresh = await afterIdentityRefresh(onIdentityChanged, async () => {
+            storeActive(null)
+            return createFresh()
+          })
           setDetail(fresh)
           setNotice('已切换到原有账号。刚才匿名资料没有迁移，请重新上传。')
         }
@@ -458,14 +445,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip }: Props) {
       <section className="pob-panel">
         <p className="pob-lead">这些资料已经暂存。现在绑定手机号，是为了下次换设备或退出后还能找回来。</p>
         {summary}
-        {!challenge && <div className="pob-phone"><input inputMode="tel" autoComplete="tel" value={phone} placeholder="手机号" onChange={(event) => setPhone(event.target.value)} /><button disabled={busy || phone.replace(/\s/g, '').length !== 11} onClick={() => void sendCode()}>获取验证码</button></div>}
-        {challenge && !resolution && <div className="pob-phone"><input inputMode="numeric" autoComplete="one-time-code" value={code} maxLength={6} placeholder="6 位验证码" onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} /><button disabled={busy || code.length !== 6} onClick={() => void verifyCode()}>验证</button></div>}
-        {resolution?.resolution === 'bind_current' && (
-          <div className="pob-identity-card"><strong>绑定当前这份资料</strong><p>验证完成后会回到这里，素材和答案都保留。</p><button className="pob-primary" disabled={busy} onClick={() => void resolveIdentity()}>绑定并继续</button></div>
-        )}
-        {resolution?.resolution === 'switch_existing' && (
-          <div className="pob-identity-card pob-warn"><strong>这个手机号已有账号</strong><p>切换后，当前匿名资料不会迁移；需要在原有账号重新上传和回答。当前资料仍由原匿名凭据保留。</p><button className="pob-primary" disabled={busy} onClick={() => void resolveIdentity()}>切换账号并重新开始</button><button className="pob-link" onClick={() => { setChallenge(null); setResolution(null); setCode('') }}>换一个手机号</button></div>
-        )}
+        <button className="pob-primary" disabled={busy} onClick={() => void resolveIdentity()}>{busy ? '正在确认…' : '手机号登录并继续'}</button>
       </section>,
       '生成前，把这份资料安全收好',
     )

@@ -1,9 +1,14 @@
-// 会话/令牌存储：游客 token 存 localStorage，随请求头 Authorization: Bearer 携带。
-// 绑定手机/微信后 token 不变、账号升级（isGuest=false）。
+// 活动会话存储。账号状态以服务端签发结果与 /me 为准；本地只保存当前 Bearer 会话。
 
 import type { Session } from '../types'
 
-const KEY = 'echo.session'
+const KEY = 'echo.auth.session.v2'
+const LEGACY_KEY = 'echo.session'
+
+interface StoredSessionV2 {
+  schemaVersion: 2
+  session: Session
+}
 
 let cached: Session | null | undefined
 
@@ -12,7 +17,15 @@ export function getSession(): Session | null {
   if (cached !== undefined) return cached
   try {
     const raw = localStorage.getItem(KEY)
-    cached = raw ? (JSON.parse(raw) as Session) : null
+    if (raw) {
+      const stored = JSON.parse(raw) as StoredSessionV2
+      cached = stored.schemaVersion === 2 ? stored.session : null
+      return cached
+    }
+    // 尚未发布，旧值只作一次结构迁移；账号有效性仍由后端 /me 校验。
+    const legacy = localStorage.getItem(LEGACY_KEY)
+    cached = legacy ? (JSON.parse(legacy) as Session) : null
+    if (cached) setSession(cached)
   } catch {
     cached = null
   }
@@ -23,7 +36,9 @@ export function getSession(): Session | null {
 export function setSession(session: Session): void {
   cached = session
   try {
-    localStorage.setItem(KEY, JSON.stringify(session))
+    const stored: StoredSessionV2 = { schemaVersion: 2, session }
+    localStorage.setItem(KEY, JSON.stringify(stored))
+    localStorage.removeItem(LEGACY_KEY)
   } catch {
     // 存储不可用时仅保留内存态
   }
@@ -48,6 +63,7 @@ export function clearSession(): void {
   cached = null
   try {
     localStorage.removeItem(KEY)
+    localStorage.removeItem(LEGACY_KEY)
   } catch {
     // ignore
   }

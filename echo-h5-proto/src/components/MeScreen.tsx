@@ -4,6 +4,7 @@ import { VISIBILITY_LABELS } from '../types'
 import { api, track } from '../api'
 import WarmthGlow from './WarmthGlow'
 import { myWindowPetId } from '../lib/myWindow'
+import { usePhoneLogin } from './PhoneLoginCoordinator'
 
 interface Props {
   me: Me
@@ -26,6 +27,7 @@ const VISIBILITY_OPTIONS: Array<{ key: Visibility; hint: string }> = [
 
 /** 我：个人主页 / 光谱入口 / 设置(可见性三档) / 订阅·付费档位 / 账号(游客→绑定) / 被记得回响 */
 export default function MeScreen({ me, pet, onOpenSpectrum, onOpenWorks, onRefresh }: Props) {
+  const { login } = usePhoneLogin()
   // 自己那扇窗的窗口键；暖光块按它取数（`GET /windows/:petId/remember`）
   const myPetId = myWindowPetId(pet)
   const [insights, setInsights] = useState<Insights | null>(null)
@@ -63,11 +65,12 @@ export default function MeScreen({ me, pet, onOpenSpectrum, onOpenWorks, onRefre
     }
   }
 
-  async function bind(type: 'phone' | 'wechat') {
+  async function bind() {
     setBinding(true)
     try {
-      await api.bind(type, `mock-${type}`)
-      track('bind_account', { type })
+      const outcome = await login({ intent: 'none' })
+      if (!outcome) return
+      track('bind_account', { type: 'phone' })
       onRefresh()
       flashToast('已经绑定好了 · 它会一直好好留在这里')
     } catch {
@@ -225,11 +228,8 @@ export default function MeScreen({ me, pet, onOpenSpectrum, onOpenWorks, onRefre
               想永久留住它、跨设备、接收它的近况？绑定后游客态的一切都会无缝继承。
             </p>
             <div className="me-bind-row">
-              <button className="me-bind phone" onClick={() => bind('phone')} disabled={binding}>
+              <button className="me-bind phone" onClick={() => void bind()} disabled={binding}>
                 📱 绑定手机
-              </button>
-              <button className="me-bind wechat" onClick={() => bind('wechat')} disabled={binding}>
-                💬 绑定微信
               </button>
             </div>
           </>

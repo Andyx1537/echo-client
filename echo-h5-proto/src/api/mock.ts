@@ -21,7 +21,6 @@ import type {
   RememberWall,
   SearchResults,
   SearchUser,
-  Session,
   ShadowAreaView,
   SpectrumNodeView,
   UserProfile,
@@ -185,12 +184,6 @@ function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-function stableAccountId(deviceId: string): string {
-  let hash = 0
-  for (let i = 0; i < deviceId.length; i++) hash = (hash * 31 + deviceId.charCodeAt(i)) | 0
-  return `acc_${Math.abs(hash).toString(36)}`
-}
-
 function freshDB(accountId: string): MockDB {
   const warmthByWindow: Record<string, number> = {}
   // 🔴 按**窗口键**建表：`warmthOf` 收的是 petId（`/windows/:petId/remember` 那一路）
@@ -222,6 +215,27 @@ function freshDB(accountId: string): MockDB {
     echoCore: {},
     rerollRound: 0,
   }
+}
+
+/** 身份 Mock 的受控写入口；只用于本地 UI 状态，不作为身份安全证据。 */
+export function mockActivatePhoneAccount(accountId: string, bindCurrent: boolean): void {
+  if (bindCurrent) {
+    const current = load()
+    current.accountId = accountId
+    current.isGuest = false
+    save()
+    return
+  }
+  db = freshDB(accountId)
+  db.isGuest = false
+  save()
+}
+
+/** 身份 Mock 的匿名设备会话投影。 */
+export function mockActivateAnonymousAccount(accountId: string): void {
+  db = freshDB(accountId)
+  db.isGuest = true
+  save()
 }
 
 let db: MockDB | null = null
@@ -491,38 +505,6 @@ export const mockBackend: EchoBackend = {
   async featureFlags(): Promise<FeatureFlags> {
     await delay(40)
     return { leaveMessage: MOCK_LEAVE_MESSAGE_ON }
-  },
-
-  async authGuest(deviceId: string): Promise<Session> {
-    await delay()
-    const accountId = stableAccountId(deviceId)
-    // 尝试复用已持久化的 DB（同设备幂等）
-    try {
-      const raw = localStorage.getItem(DB_KEY)
-      if (raw) {
-        const existing = JSON.parse(raw) as MockDB
-        // 同设备幂等复用；但版本过期的旧缓存要重建为最新种子
-        if (existing.accountId === accountId && existing.version === DB_VERSION) {
-          db = existing
-          rollQuota(db)
-          save()
-          return { token: `guest_${accountId}`, accountId, isGuest: db.isGuest, hasPet: db.hasPet }
-        }
-      }
-    } catch {
-      // ignore
-    }
-    db = freshDB(accountId)
-    save()
-    return { token: `guest_${accountId}`, accountId, isGuest: db.isGuest, hasPet: db.hasPet }
-  },
-
-  async bind(_type, _credential) {
-    await delay()
-    const d = load()
-    d.isGuest = false
-    save()
-    return { isGuest: false }
   },
 
   async me(): Promise<Me> {
