@@ -11,6 +11,7 @@ export type Continuation =
 
 export type PhoneResolutionKind = 'bind_current' | 'switch_existing'
 export type PhoneNextAction =
+  | 'none'
   | 'resume_private_onboarding'
   | 'restart_in_existing_account'
   | 'open_private_onboarding'
@@ -123,6 +124,7 @@ export function applyDeviceSession(result: DeviceSessionResult): Session {
 
 export function applyPhoneResolution(result: PhoneResolutionResult): Session {
   const validNextActions: PhoneNextAction[] = [
+    'none',
     'resume_private_onboarding',
     'restart_in_existing_account',
     'open_private_onboarding',

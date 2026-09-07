@@ -67,6 +67,17 @@ describe('phone-account-resolution-v1 frontend boundary', () => {
     expect(getSession()).toMatchObject({ accountId: 'anon-1', token: 'bound-token', isGuest: false })
   })
 
+  it('accepts nextAction none for account-center login without a continuation target', () => {
+    setActiveDeviceCredential('device-current')
+    applyPhoneResolution({
+      accountId: 'anon-1', phoneBound: true, sessionToken: 'bound-token', deviceCredential: null,
+      returnToAllowed: false, nextAction: 'none',
+      previousAnonymousCredentialDisposition: 'revoked',
+    })
+    expect(getActiveDeviceCredential()).toBeNull()
+    expect(getSession()).toMatchObject({ accountId: 'anon-1', token: 'bound-token', isGuest: false })
+  })
+
   it('switch_existing moves the anonymous credential into the sleeping recovery vault', () => {
     setActiveDeviceCredential('device-current')
     applyPhoneResolution({
