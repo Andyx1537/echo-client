@@ -72,7 +72,7 @@ export const mockAuthApi: AuthApi = {
     const store = readStore()
     const challenge = store.challenges[challengeId]
     if (!challenge) throw new AuthApiError('challenge_expired', '验证码已经过期，请重新获取')
-    if (code !== '123456') throw new AuthApiError('code_invalid', '验证码不太对，请再看一眼')
+    if (code !== '9999') throw new AuthApiError('code_invalid', '验证码不太对，请再看一眼')
     const resolution: PhoneResolution = {
       resolution: challenge.phone.endsWith('0000') ? 'switch_existing' : 'bind_current',
       resolutionToken: id('resolution'),
