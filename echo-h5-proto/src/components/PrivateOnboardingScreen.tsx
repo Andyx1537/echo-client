@@ -66,6 +66,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [pollRetry, setPollRetry] = useState(0)
   const [editingQuestion, setEditingQuestion] = useState<QuestionId | null>(null)
   const [draftCodes, setDraftCodes] = useState<string[]>([])
   const [freeText, setFreeText] = useState('')
@@ -126,7 +127,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
       }
     }, Math.max(300, job.pollAfterMs || 1500))
     return () => window.clearTimeout(timer)
-  }, [detail])
+  }, [detail, pollRetry])
 
   async function run(task: (current: OnboardingDetail) => Promise<OnboardingDetail>): Promise<OnboardingDetail | null> {
     if (!detail || busy) return null
@@ -470,6 +471,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
         <span className="pob-loader" />
         <h2>{snapshot.status === 'refining' ? '正在把熟悉的感觉靠近一点' : '正在从这些真实片段里，慢慢勾勒它'}</h2>
         <p>可以暂时离开。回来后会从服务端恢复，不会重新提交任务。</p>
+        {error && <button className="pob-primary" onClick={() => { setError(null); setPollRetry((value) => value + 1) }}>重新查询进度</button>}
         <button className="pob-link" onClick={onSkip}>先去别处看看</button>
       </section>,
     )
