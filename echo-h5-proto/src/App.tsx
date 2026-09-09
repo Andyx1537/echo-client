@@ -11,7 +11,7 @@ import MeScreen from './components/MeScreen'
 import RelationRow from './components/RelationRow'
 import ReelViewer from './components/ReelViewer'
 import SpectrumScreen from './components/SpectrumScreen'
-import OnboardingScreen from './components/OnboardingScreen'
+import PrivateOnboardingScreen from './components/PrivateOnboardingScreen'
 import SearchScreen from './components/SearchScreen'
 import UserProfileScreen from './components/UserProfileScreen'
 import PublishScreen from './components/PublishScreen'
@@ -303,8 +303,9 @@ export default function App() {
   if (phase === 'onboarding') {
     return (
       <PhoneFrame>
-        <OnboardingScreen
+        <PrivateOnboardingScreen
           onComplete={onboardingDone}
+          onIdentityChanged={async () => { await refreshMe() }}
           onSkip={() => {
             setPhase('app')
             setTab('home')

@@ -23,7 +23,6 @@ import type {
   RelationUser,
   RememberWall,
   SearchResults,
-  Session,
   UserProfile,
   Visibility,
   Window,
@@ -138,8 +137,6 @@ export interface EchoBackend {
   featureFlags(): Promise<FeatureFlags>
 
   // 1. 鉴权 / 账号
-  authGuest(deviceId: string): Promise<Session>
-  bind(type: 'phone' | 'wechat', credential: string): Promise<{ isGuest: boolean }>
   me(): Promise<Me>
 
   // 2. 建档 Onboarding

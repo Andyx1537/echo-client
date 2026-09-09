@@ -1,6 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import PhoneFrame from './components/PhoneFrame'
+import PrivateOnboardingScreen from './components/PrivateOnboardingScreen'
+import PhoneLoginCoordinator from './components/PhoneLoginCoordinator'
 import './styles/global.css'
 
 // 🔴 临时：视觉选型对比页（`src/dev/`）。只在开发模式且带 `?visual=` 时生效，
@@ -10,12 +13,16 @@ const VisualCompare = React.lazy(() => import('./dev/VisualCompare'))
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {devVisual?.has('visual') || devVisual?.has('design') ? (
+    <PhoneLoginCoordinator>{devVisual?.has('onboarding') ? (
+      <PhoneFrame>
+        <PrivateOnboardingScreen onComplete={() => {}} onSkip={() => {}} onIdentityChanged={async () => {}} />
+      </PhoneFrame>
+    ) : devVisual?.has('visual') || devVisual?.has('design') ? (
       <React.Suspense fallback={null}>
         <VisualCompare params={devVisual} />
       </React.Suspense>
     ) : (
       <App />
-    )}
+    )}</PhoneLoginCoordinator>
   </React.StrictMode>,
 )

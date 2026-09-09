@@ -20,7 +20,6 @@ import type {
   RecordItem,
   RememberWall,
   SearchResults,
-  Session,
   UserProfile,
   ShadowArea,
   SpectrumNode,
@@ -117,9 +116,6 @@ export const httpBackend: EchoBackend = {
   // 等于在客户端把服务端开关打开了，那正是 S13 ② 要防的事。
   featureFlags: () => get<FeatureFlags>('/config/flags'),
 
-  authGuest: (deviceId) => post<Session>('/auth/guest', { deviceId }),
-  bind: (type, credential) =>
-    post<{ isGuest: boolean }>('/auth/bind', { type, credential }),
   me: () => get<Me>('/me'),
 
   onboardingStart: (payload: OnboardingStartPayload) =>
