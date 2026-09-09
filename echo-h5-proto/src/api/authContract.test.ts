@@ -3,6 +3,7 @@ import {
   applyDeviceSession,
   applyPhoneResolution,
   httpAuthApi,
+  normalizeMobilePhone,
   type PhoneResolutionResult,
 } from './authContract'
 import {
@@ -37,6 +38,15 @@ beforeEach(() => {
 })
 
 describe('phone-account-resolution-v1 frontend boundary', () => {
+  it('normalizes any 11-digit number or E.164 input before challenge', () => {
+    expect(normalizeMobilePhone('13800000000')).toBe('+8613800000000')
+    expect(normalizeMobilePhone('+86 138 0000 0000')).toBe('+8613800000000')
+    expect(normalizeMobilePhone('00000000000')).toBe('+8600000000000')
+    expect(normalizeMobilePhone('+8613800000000')).toBe('+8613800000000')
+    expect(normalizeMobilePhone('1380000000')).toBeNull()
+    expect(normalizeMobilePhone('abc')).toBeNull()
+  })
+
   it('keeps bootstrap nonce and idempotency key stable until the operation is cleared', () => {
     const first = getOrCreateBootstrapOperation()
     expect(getOrCreateBootstrapOperation()).toEqual(first)

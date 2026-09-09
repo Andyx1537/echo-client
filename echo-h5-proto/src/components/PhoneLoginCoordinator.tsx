@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { authApi } from '../api/auth'
-import { AuthApiError, applyPhoneResolution, type Continuation, type PhoneChallenge, type PhoneResolutionResult } from '../api/authContract'
+import { AuthApiError, applyPhoneResolution, normalizeMobilePhone, type Continuation, type PhoneChallenge, type PhoneResolutionResult } from '../api/authContract'
 import { newIdempotencyKey } from '../api/authCredentialStore'
 
 type Outcome = { result: PhoneResolutionResult }
@@ -34,8 +34,7 @@ function Dialog({ continuation, finish }: { continuation: Continuation; finish: 
     if (!keys.current.has(slot)) keys.current.set(slot, newIdempotencyKey())
     return keys.current.get(slot)!
   }
-  const compact = phone.replace(/[\s()-]/g, '')
-  const normalized = /^\d{11}$/.test(compact) ? `+86${compact}` : /^\+[1-9]\d{7,14}$/.test(compact) ? compact : null
+  const normalized = normalizeMobilePhone(phone)
   useEffect(() => {
     if (!challenge || resolution) return
     setNow(Date.now())

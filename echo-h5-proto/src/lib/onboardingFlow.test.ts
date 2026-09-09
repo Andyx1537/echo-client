@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { OnboardingDetail, OnboardingSnapshot } from '../api/onboardingContract'
-import { ONBOARDING_QUESTIONS, answerCountIsValid, deriveOnboardingView, firstMissingQuestion, recoverableMessage } from './onboardingFlow'
+import { ONBOARDING_QUESTIONS, answerCountIsValid, deriveOnboardingView, firstMissingQuestion, recoverableMessage, shouldResumePrivateOnboarding } from './onboardingFlow'
 
 const snapshot: OnboardingSnapshot = {
   onboardingId: 'ob-1', accountId: 'acc-1', petName: '它', status: 'collecting', currentStep: 'questionnaire',
@@ -50,5 +50,20 @@ describe('onboarding flow', () => {
     expect(recoverableMessage('generate_failed')).toContain('可以再试一次')
     expect(recoverableMessage('refine_failed')).toContain('原来的候选还在')
     expect(deriveOnboardingView(detail({ snapshot: { ...snapshot, status: 'ready_to_confirm' } }))).toBe('confirming')
+  })
+
+  it('resumes only when the server allows return and names the onboarding continuation', () => {
+    expect(shouldResumePrivateOnboarding({
+      returnToAllowed: true, nextAction: 'resume_private_onboarding',
+    })).toBe(true)
+    expect(shouldResumePrivateOnboarding({
+      returnToAllowed: false, nextAction: 'restart_in_existing_account',
+    })).toBe(false)
+    expect(shouldResumePrivateOnboarding({
+      returnToAllowed: true, nextAction: 'restart_in_existing_account',
+    })).toBe(false)
+    expect(shouldResumePrivateOnboarding({
+      returnToAllowed: false, nextAction: 'resume_private_onboarding',
+    })).toBe(false)
   })
 })

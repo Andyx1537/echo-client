@@ -1,6 +1,6 @@
 import { mockActivateAnonymousAccount, mockActivatePhoneAccount } from './mock'
 import type { AuthApi, Continuation, PhoneResolution } from './authContract'
-import { AuthApiError } from './authContract'
+import { AuthApiError, normalizeMobilePhone } from './authContract'
 
 interface MockChallenge {
   phone: string
@@ -32,13 +32,6 @@ function id(prefix: string): string {
   return `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`
 }
 
-function normalizePhone(value: string): string | null {
-  const compact = value.replace(/[\s()-]/g, '')
-  if (/^\+[1-9]\d{7,14}$/.test(compact)) return compact
-  if (/^1\d{10}$/.test(compact)) return `+86${compact}`
-  return null
-}
-
 export const mockAuthApi: AuthApi = {
   async deviceSession(input) {
     const store = readStore()
@@ -59,7 +52,7 @@ export const mockAuthApi: AuthApi = {
   },
 
   async createPhoneChallenge(phone, continuation) {
-    const normalized = normalizePhone(phone)
+    const normalized = normalizeMobilePhone(phone)
     if (!normalized) throw new AuthApiError('phone_invalid', '请填写完整的手机号和国家/地区代码')
     const store = readStore()
     const challengeId = id('challenge')

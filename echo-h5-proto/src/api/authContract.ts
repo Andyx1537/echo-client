@@ -115,6 +115,13 @@ export const httpAuthApi: AuthApi = {
     request(`/auth/phone/resolutions/${encodeURIComponent(token)}/confirm`, {}, key, true),
 }
 
+export function normalizeMobilePhone(value: string): string | null {
+  const compact = value.replace(/[\s()-]/g, '')
+  if (/^\+[1-9]\d{7,14}$/.test(compact)) return compact
+  if (/^\d{11}$/.test(compact)) return `+86${compact}`
+  return null
+}
+
 export function applyDeviceSession(result: DeviceSessionResult): Session {
   const session: Session = { token: result.sessionToken, accountId: result.accountId, isGuest: true, hasPet: false }
   setActiveDeviceCredential(result.deviceCredential)
