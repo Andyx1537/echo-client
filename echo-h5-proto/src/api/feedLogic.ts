@@ -7,14 +7,14 @@
 //
 // 红线：顺序**沿用进入时那份列表**（从广场进顺广场、从题材进顺该题材），绝不在此另起一套推荐排序。
 
-import type { Window } from '../types'
+import type { PlazaCard, Window } from '../types'
 import type { CardId, CardOrigin } from '../lib/ids'
 
 export type FeedCategory = NonNullable<Window['category']>
 
 /** 一页列表返回（与契约 §14.1 统一信封同形） */
 export interface FeedPage {
-  items: Window[]
+  items: PlazaCard[]
   nextCursor: string | null
 }
 
@@ -104,7 +104,7 @@ export function appendPage(state: FeedState, page: FeedPage): FeedState {
   const seen = new Set(state.cards.map((c) => c.id))
   const fresh: CardOrigin[] = []
   for (const w of page.items) {
-    if (state.category && w.category !== state.category) continue
+    if (state.category && w.presentation?.category !== state.category) continue
     if (seen.has(w.id)) continue
     seen.add(w.id)
     fresh.push({ id: w.id, petId: w.petId })

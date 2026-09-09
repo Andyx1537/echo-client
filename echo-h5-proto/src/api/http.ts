@@ -13,6 +13,7 @@ import type {
   OnboardingCandidate,
   Paged,
   PendingMessage,
+  PlazaCard,
   Postcard,
   PostcardSkin,
   PurchaseResult,
@@ -188,7 +189,7 @@ export const httpBackend: EchoBackend = {
   rememberWall: (windowId) =>
     get<RememberWall>(`/windows/${encodeURIComponent(windowId)}/remember`),
 
-  plaza: (cursor) => get<Paged<Window>>(`/plaza${pageQuery(cursor)}`),
+  plaza: (cursor) => get<Paged<PlazaCard>>(`/plaza${pageQuery(cursor)}`),
   windowDetail: (windowId) =>
     get<WindowDetail>(`/windows/${encodeURIComponent(windowId)}`),
   windowSeen: (windowId) =>

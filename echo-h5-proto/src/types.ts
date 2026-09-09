@@ -86,8 +86,35 @@ export interface WindowEcho {
 /** 可见性直白三档（§0.7 #1，服务端强制），默认 private */
 export type Visibility = 'private' | 'friends' | 'public'
 
+/** 回忆卡来源。与服务端 CardView.sourceType 保持一一对应。 */
+export type CardSourceType = 'record' | 'book_page' | 'postcard' | 'echo'
+
 /**
- * 一扇窗 = 一段可分享的记忆窗口（GET /plaza item）。
+ * 共鸣厅列表项（GET /plaza），逐字段对应服务端 CardView。
+ * 列表面刻意不包含作者、暖光、互动计数和正文全文。
+ */
+export interface PlazaCard {
+  id: CardId
+  petId: PetId
+  title: string
+  excerpt: string
+  cover: string
+  hasCover: boolean
+  sourceType: CardSourceType | ''
+  topicIds: string[]
+  publishedAt: number | null
+  /** mock/视觉演示专用增强信息；真实 HTTP 响应不会提供。 */
+  presentation?: {
+    category?: NonNullable<Window['category']>
+    cover: Placeholder
+    ownerName?: string
+    ownerAvatar?: string
+    ownerAccountType?: AccountType
+  }
+}
+
+/**
+ * 一扇窗 = 一段可分享的记忆窗口（GET /windows/:petId）。
  * 注意：契约 §6 去掉了精确 rememberCount，改用 warmthLevel（暖光浓度 0-1），
  * 前端据此渲染光晕强度，**绝不展示数字/排名**（§0.7 #4 红线）。
  */
