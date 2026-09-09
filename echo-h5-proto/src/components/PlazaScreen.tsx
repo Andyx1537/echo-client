@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Window } from '../types'
+import type { Placeholder, PlazaCard, Window } from '../types'
 import type { CardOrigin } from '../lib/ids'
 import { api } from '../api'
 import { CATEGORY_LABELS } from '../api/searchLogic'
@@ -17,7 +17,7 @@ export interface FeedOpenContext {
 }
 
 interface Props {
-  onOpen: (w: Window, ctx: FeedOpenContext) => void
+  onOpen: (card: PlazaCard, ctx: FeedOpenContext) => void
   /** 点搜索栏 → 打开全屏搜索页（A.1） */
   onOpenSearch: () => void
   /** 主题聚合：只看某题材的窗（搜索「主题」结果点入时复用广场过滤，A.3） */
@@ -37,7 +37,7 @@ interface Props {
  * 的出参里摘掉，是契约问题，见回执里的清单。
  */
 export default function PlazaScreen({ onOpen, onOpenSearch, category, onClearCategory }: Props) {
-  const [windows, setWindows] = useState<Window[]>([])
+  const [cards, setCards] = useState<PlazaCard[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -50,7 +50,7 @@ export default function PlazaScreen({ onOpen, onOpenSearch, category, onClearCat
       .plaza()
       .then((res) => {
         if (!alive) return
-        setWindows(res.items)
+        setCards(res.items)
         setCursor(res.nextCursor)
       })
       .finally(() => alive && setLoading(false))
@@ -67,7 +67,7 @@ export default function PlazaScreen({ onOpen, onOpenSearch, category, onClearCat
     setLoadingMore(true)
     try {
       const res = await api.plaza(cursor)
-      setWindows((cur) => {
+      setCards((cur) => {
         const seen = new Set(cur.map((w) => w.id))
         return [...cur, ...res.items.filter((w) => !seen.has(w.id))]
       })
@@ -93,7 +93,9 @@ export default function PlazaScreen({ onOpen, onOpenSearch, category, onClearCat
     return () => io.disconnect()
   }, [cursor, loadMore])
 
-  const shown = category ? windows.filter((w) => w.category === category) : windows
+  const shown = category
+    ? cards.filter((card) => card.presentation?.category === category)
+    : cards
 
   return (
     <div className="plaza">
@@ -116,12 +118,19 @@ export default function PlazaScreen({ onOpen, onOpenSearch, category, onClearCat
       ) : (
         <>
           <div className="masonry">
-            {shown.map((w) => (
+            {shown.map((card, index) => {
+              const presentation = card.presentation
+              const cover: Placeholder = presentation?.cover ?? {
+                gradient: 'linear-gradient(150deg,#f3eadc,#d9c9b1)',
+                emoji: card.hasCover ? '' : '✦',
+                imageUrl: card.hasCover ? card.cover : undefined,
+              }
+              return (
               <button
-                key={w.id}
+                key={card.id}
                 className="w-card"
                 onClick={() =>
-                  onOpen(w, {
+                  onOpen(card, {
                     cards: shown.map((x) => ({ id: x.id, petId: x.petId })),
                     nextCursor: cursor,
                   })
@@ -129,20 +138,24 @@ export default function PlazaScreen({ onOpen, onOpenSearch, category, onClearCat
               >
                 <div className="w-cover-wrap">
                   <CoverPlaceholder
-                    data={w.cover}
-                    className={w.span === 'tall' ? 'cover-tall' : 'cover-short'}
+                    data={cover}
+                    className={index % 3 === 1 ? 'cover-tall' : 'cover-short'}
                   />
                 </div>
                 <div className="w-card-body">
-                  <p className="w-recent">{w.recent}</p>
-                  <div className="w-meta">
-                    <span className="w-avatar" style={{ background: w.ownerAvatar }} />
-                    <span className="w-owner">{w.ownerName}</span>
-                    {w.ownerAccountType === 'ops' && <OpsMark />}
-                  </div>
+                  {card.title && <p className="w-title">{card.title}</p>}
+                  <p className="w-recent">{card.excerpt}</p>
+                  {presentation?.ownerName && (
+                    <div className="w-meta">
+                      <span className="w-avatar" style={{ background: presentation.ownerAvatar }} />
+                      <span className="w-owner">{presentation.ownerName}</span>
+                      {presentation.ownerAccountType === 'ops' && <OpsMark />}
+                    </div>
+                  )}
                 </div>
               </button>
-            ))}
+              )
+            })}
           </div>
 
           {/* 续拉哨兵 + 温柔的到底提示（不空白、不「没有更多了」式冷话） */}

@@ -31,6 +31,7 @@ import type {
   FeatureFlags,
   MessageDisposition,
   PendingMessage,
+  PlazaCard,
   ReactionArrival,
   ReactionKind,
   Work,
@@ -736,15 +737,31 @@ export const mockBackend: EchoBackend = {
     }
   },
 
-  async plaza(cursor): Promise<Paged<Window>> {
+  async plaza(cursor): Promise<Paged<PlazaCard>> {
     await delay(120)
-    const d = load()
     // 游标 = 下一页起始偏移（离线实现细节；前端只认 nextCursor 不解析其含义）
     const start = Math.max(0, Number(cursor ?? 0) || 0)
     const slice = catalog.slice(start, start + PLAZA_PAGE_SIZE)
     const end = start + slice.length
     // 用暖光浓度呈现，去精确数字
-    const items = slice.map((w) => ({ ...w, warmthLevel: warmthOf(d, w.petId) }))
+    const items: PlazaCard[] = slice.map((w) => ({
+      id: w.id,
+      petId: w.petId,
+      title: w.title ?? w.petName,
+      excerpt: w.recent,
+      cover: w.cover.imageUrl ?? '',
+      hasCover: Boolean(w.cover.imageUrl),
+      sourceType: 'record',
+      topicIds: w.category ? [w.category] : [],
+      publishedAt: null,
+      presentation: {
+        category: w.category,
+        cover: w.cover,
+        ownerName: w.ownerName,
+        ownerAvatar: w.ownerAvatar,
+        ownerAccountType: w.ownerAccountType,
+      },
+    }))
     return { items, nextCursor: end < catalog.length ? String(end) : null }
   },
 

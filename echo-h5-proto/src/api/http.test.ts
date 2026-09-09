@@ -111,6 +111,34 @@ describe('http 广场游标续拉（TC-13 同一条流）', () => {
     const [url] = fn.mock.calls[0] as [string, RequestInit]
     expect(url).toMatch(/\/plaza$/)
   })
+
+  it('plaza() 按 CardView 契约读取卡片，不要求窗口展示字段', async () => {
+    mockFetchOnce({
+      items: [{
+        id: 'card-1',
+        petId: 'pet-1',
+        title: '',
+        excerpt: '正文首句。',
+        cover: '',
+        hasCover: false,
+        sourceType: 'record',
+        topicIds: [],
+        publishedAt: 100,
+      }],
+      nextCursor: null,
+    })
+    const res = await httpBackend.plaza()
+    expect(res.items[0]).toMatchObject({
+      id: 'card-1',
+      petId: 'pet-1',
+      excerpt: '正文首句。',
+      hasCover: false,
+      sourceType: 'record',
+    })
+    expect(res.items[0]).not.toHaveProperty('recent')
+    expect(res.items[0]).not.toHaveProperty('warmthLevel')
+    expect(res.items[0]).not.toHaveProperty('ownerName')
+  })
 })
 
 // B7/TC-23：换一批换的是口吻，走 {items,nextCursor} 信封；端点不可用时按 AI 既有降级回落。

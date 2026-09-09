@@ -33,7 +33,7 @@ import {
 } from './api/feedLogic'
 import { myWindowPetId } from './lib/myWindow'
 import { useRelations } from './hooks/useRelations'
-import type { Me, Message, MyPet, Window } from './types'
+import type { Me, Message, MyPet, PlazaCard, Window } from './types'
 import './styles/app.css'
 
 type Phase = 'loading' | 'onboarding' | 'app'
@@ -418,7 +418,7 @@ export default function App() {
       case 'home':
         return (
           <PlazaScreen
-            onOpen={(w: Window, ctx: FeedOpenContext) =>
+            onOpen={(w: PlazaCard, ctx: FeedOpenContext) =>
               openWindow(
                 { id: w.id, petId: w.petId },
                 {

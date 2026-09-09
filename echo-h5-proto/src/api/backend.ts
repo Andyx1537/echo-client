@@ -13,6 +13,7 @@ import type {
   MessageDisposition,
   MyPet,
   PendingMessage,
+  PlazaCard,
   OnboardingCandidate,
   Paged,
   Postcard,
@@ -178,7 +179,7 @@ export interface EchoBackend {
   rememberWall(petId: PetId): Promise<RememberWall>
 
   // 6. 窗口页 / 广场
-  plaza(cursor?: string): Promise<Paged<Window>>
+  plaza(cursor?: string): Promise<Paged<PlazaCard>>
   windowDetail(petId: PetId): Promise<WindowDetail>
   windowSeen(petId: PetId): Promise<{ ok: boolean }>
   insights(): Promise<Insights>

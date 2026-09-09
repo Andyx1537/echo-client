@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { asCardId, asPetId } from '../lib/ids'
-import type { Window } from '../types'
+import type { PlazaCard, Window } from '../types'
 import {
   EMPTY_FEED,
   PREFETCH_DISTANCE,
@@ -26,20 +26,21 @@ import {
  */
 const petOf = (id: string) => asPetId(`p-${id}`)
 
-function win(id: string, category?: Window['category']): Window {
+function win(id: string, category?: Window['category']): PlazaCard {
   return {
     id: asCardId(id),
     petId: petOf(id),
-    petName: id,
-    category,
-    ownerName: '某人',
-    ownerAvatar: '',
-    recent: '',
-    signature: '',
-    warmthLevel: 0.5,
-    cover: { gradient: '', emoji: '' },
-    lifeBook: [],
-    span: 'short',
+    title: id,
+    excerpt: '',
+    cover: '',
+    hasCover: false,
+    sourceType: 'record',
+    topicIds: category ? [category] : [],
+    publishedAt: null,
+    presentation: {
+      category,
+      cover: { gradient: '', emoji: '' },
+    },
   }
 }
 
