@@ -63,6 +63,15 @@ export function getAnonymousRecoveryCredentials(): string[] {
   }
 }
 
+export function consumeAnonymousRecoveryCredential(value: string): void {
+  try {
+    const credentials = getAnonymousRecoveryCredentials().filter((item) => item !== value)
+    localStorage.setItem(RECOVERY_KEY, JSON.stringify({ schemaVersion: 1, credentials }))
+  } catch {
+    // 服务端已消费该凭据；本机清不掉只影响列表展示。
+  }
+}
+
 export function getOrCreateBootstrapOperation(): BootstrapOperation {
   try {
     const raw = sessionStorage.getItem(BOOTSTRAP_KEY)

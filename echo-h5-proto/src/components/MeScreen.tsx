@@ -4,6 +4,8 @@ import { VISIBILITY_LABELS } from '../types'
 import { api, track } from '../api'
 import WarmthGlow from './WarmthGlow'
 import { myWindowPetId } from '../lib/myWindow'
+import { authApi, applyDeviceSession } from '../api/auth'
+import { consumeAnonymousRecoveryCredential, getAnonymousRecoveryCredentials, newIdempotencyKey } from '../api/authCredentialStore'
 import { usePhoneLogin } from './PhoneLoginCoordinator'
 
 interface Props {
@@ -34,6 +36,8 @@ export default function MeScreen({ me, pet, onOpenSpectrum, onOpenWorks, onRefre
   const [visibility, setVisibility] = useState<Visibility>(pet?.visibility ?? me.visibilityDefault)
   const [toast, setToast] = useState<string | null>(null)
   const [binding, setBinding] = useState(false)
+  const [waking, setWaking] = useState(false)
+  const recoveryCredential = getAnonymousRecoveryCredentials().at(-1) ?? null
 
   useEffect(() => {
     let alive = true
@@ -62,6 +66,26 @@ export default function MeScreen({ me, pet, onOpenSpectrum, onOpenWorks, onRefre
       } catch {
         flashToast('待会儿再试一次吧')
       }
+    }
+  }
+
+  async function wakeAnonymous() {
+    if (!recoveryCredential) return
+    setWaking(true)
+    try {
+      const result = await authApi.recoverAnonymousSession(recoveryCredential, newIdempotencyKey())
+      if (result.deviceCredentialAction !== 'recovered' || result.phoneBound !== false) {
+        flashToast('这次没有回到原来的资料')
+        return
+      }
+      applyDeviceSession(result)
+      consumeAnonymousRecoveryCredential(recoveryCredential)
+      onRefresh()
+      flashToast('已经回到刚才那份未绑定的资料，生成前仍要确认手机号')
+    } catch {
+      flashToast('没能回到那份资料，待会儿再试')
+    } finally {
+      setWaking(false)
     }
   }
 
@@ -234,7 +258,16 @@ export default function MeScreen({ me, pet, onOpenSpectrum, onOpenWorks, onRefre
             </div>
           </>
         ) : (
-          <p className="me-card-sub">账号已绑定，它会一直好好留在这里。</p>
+          <>
+            <p className="me-card-sub">账号已绑定，它会一直好好留在这里。</p>
+            {recoveryCredential && (
+              <div className="me-bind-row">
+                <button className="me-bind" onClick={() => void wakeAnonymous()} disabled={waking}>
+                  {waking ? '正在切换…' : '回到未绑定的那份资料'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
 

@@ -11,6 +11,7 @@ interface MockChallenge {
 interface MockAuthStore {
   challenges: Record<string, MockChallenge>
   deviceAccounts: Record<string, string>
+  recoveries: Record<string, string>
 }
 
 const KEY = 'echo.mock.auth.v1'
@@ -18,9 +19,14 @@ const KEY = 'echo.mock.auth.v1'
 function readStore(): MockAuthStore {
   try {
     const raw = localStorage.getItem(KEY)
-    return raw ? (JSON.parse(raw) as MockAuthStore) : { challenges: {}, deviceAccounts: {} }
+    const parsed = raw ? (JSON.parse(raw) as Partial<MockAuthStore>) : {}
+    return {
+      challenges: parsed.challenges ?? {},
+      deviceAccounts: parsed.deviceAccounts ?? {},
+      recoveries: parsed.recoveries ?? {},
+    }
   } catch {
-    return { challenges: {}, deviceAccounts: {} }
+    return { challenges: {}, deviceAccounts: {}, recoveries: {} }
   }
 }
 
@@ -84,12 +90,32 @@ export const mockAuthApi: AuthApi = {
     return resolution
   },
 
+  async recoverAnonymousSession(recoveryCredential) {
+    const store = readStore()
+    const accountId = store.recoveries[recoveryCredential]
+    if (!accountId) throw new AuthApiError('device_credential_recovery_required', '请从账号切换入口恢复这份资料')
+    const deviceCredential = id('device')
+    store.deviceAccounts[deviceCredential] = accountId
+    delete store.recoveries[recoveryCredential]
+    writeStore(store)
+    mockActivateAnonymousAccount(accountId)
+    return {
+      accountId,
+      phoneBound: false,
+      sessionToken: id('session'),
+      deviceCredential,
+      deviceCredentialAction: 'recovered' as const,
+    }
+  },
+
   async confirmPhoneResolution(resolutionToken) {
     const store = readStore()
     const challenge = store.challenges[resolutionToken]
     if (!challenge?.resolution) throw new AuthApiError('resolution_expired', '这次确认已经过期，请重新验证')
     const switched = challenge.resolution.resolution === 'switch_existing'
     const accountId = switched ? `account-${challenge.phone.slice(-4)}` : 'mock-current-account'
+    const recoveryCredential = switched ? id('recovery') : null
+    if (recoveryCredential) store.recoveries[recoveryCredential] = id('account')
     mockActivatePhoneAccount(accountId, !switched)
     delete store.challenges[resolutionToken]
     writeStore(store)
@@ -105,7 +131,7 @@ export const mockAuthApi: AuthApi = {
           ? 'resume_private_onboarding'
           : 'open_private_onboarding',
       previousAnonymousCredentialDisposition: switched ? 'retained_as_recovery' : 'revoked',
-      ...(switched ? { anonymousRecovery: { recoveryCredential: id('recovery') } } : {}),
+      ...(recoveryCredential ? { anonymousRecovery: { recoveryCredential } } : {}),
     }
   },
 }
