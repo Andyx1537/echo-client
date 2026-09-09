@@ -125,7 +125,7 @@ export function applyDeviceSession(result: DeviceSessionResult): Session {
   return session
 }
 
-export function applyPhoneResolution(result: PhoneResolutionResult): Session {
+export function applyPhoneResolution(result: PhoneResolutionResult, reservedOnboardingId?: string): Session {
   const validNextActions: PhoneNextAction[] = [
     'none',
     'resume_private_onboarding',
@@ -150,7 +150,7 @@ export function applyPhoneResolution(result: PhoneResolutionResult): Session {
   if (result.previousAnonymousCredentialDisposition === 'revoked') {
     setActiveDeviceCredential(null)
   } else {
-    retainAnonymousRecoveryCredential(recoveryCredential!)
+    retainAnonymousRecoveryCredential(recoveryCredential!, reservedOnboardingId)
     setActiveDeviceCredential(null)
   }
   const session: Session = { token: result.sessionToken, accountId: result.accountId, isGuest: false, hasPet: false }

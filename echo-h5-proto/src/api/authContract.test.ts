@@ -87,10 +87,13 @@ describe('phone-account-resolution-v1 frontend boundary', () => {
       returnToAllowed: false, nextAction: 'restart_in_existing_account',
       previousAnonymousCredentialDisposition: 'retained_as_recovery',
       anonymousRecovery: { recoveryCredential: 'recovery-1' },
-    })
+    }, 'onboarding-reserved')
     expect(getActiveDeviceCredential()).toBeNull()
     expect(getAnonymousRecoveryCredentials()).toEqual(['recovery-1'])
     expect(getSession()).toMatchObject({ accountId: 'phone-account', token: 'phone-token', isGuest: false })
+    expect(consumeAnonymousRecoveryCredential('recovery-1')).toBe('onboarding-reserved')
+    expect(localStorage.getItem('echo.private-onboarding.active.v1')).toBe('onboarding-reserved')
+    expect(getAnonymousRecoveryCredentials()).toEqual([])
   })
 
   it('rejects an incomplete switch response before changing anonymous credentials or session', () => {

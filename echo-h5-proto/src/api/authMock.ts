@@ -1,4 +1,5 @@
 import { mockActivateAnonymousAccount, mockActivatePhoneAccount } from './mock'
+import { getSession } from './session'
 import type { AuthApi, Continuation, PhoneResolution } from './authContract'
 import { AuthApiError } from './authContract'
 
@@ -114,8 +115,9 @@ export const mockAuthApi: AuthApi = {
     if (!challenge?.resolution) throw new AuthApiError('resolution_expired', '这次确认已经过期，请重新验证')
     const switched = challenge.resolution.resolution === 'switch_existing'
     const accountId = switched ? `account-${challenge.phone.slice(-4)}` : 'mock-current-account'
-    const recoveryCredential = switched ? id('recovery') : null
-    if (recoveryCredential) store.recoveries[recoveryCredential] = id('account')
+    const previousAccountId = getSession()?.accountId
+    const recoveryCredential = switched && previousAccountId ? id('recovery') : null
+    if (recoveryCredential && previousAccountId) store.recoveries[recoveryCredential] = previousAccountId
     mockActivatePhoneAccount(accountId, !switched)
     delete store.challenges[resolutionToken]
     writeStore(store)
@@ -130,7 +132,7 @@ export const mockAuthApi: AuthApi = {
         : challenge.continuation.intent === 'private_onboarding_generation'
           ? 'resume_private_onboarding'
           : 'open_private_onboarding',
-      previousAnonymousCredentialDisposition: switched ? 'retained_as_recovery' : 'revoked',
+      previousAnonymousCredentialDisposition: recoveryCredential ? 'retained_as_recovery' : 'revoked',
       ...(recoveryCredential ? { anonymousRecovery: { recoveryCredential } } : {}),
     }
   },
