@@ -18,6 +18,7 @@ import {
   firstMissingQuestion,
   questionById,
   recoverableMessage,
+  shouldResumePrivateOnboarding,
 } from '../lib/onboardingFlow'
 import '../styles/privateOnboarding.css'
 
@@ -427,7 +428,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
       try {
         const outcome = await login({ intent: 'private_onboarding_generation', resourceId: snapshot.onboardingId, schemaVersion: 'v1' })
         if (!outcome) return
-        if (outcome.result.returnToAllowed && outcome.result.nextAction === 'resume_private_onboarding') {
+        if (shouldResumePrivateOnboarding(outcome.result)) {
           const restored = await afterIdentityRefresh(onIdentityChanged, () => onboardingApi.get(snapshot.onboardingId))
           setDetail(restored)
           setNotice('已经安全回到刚才的资料，可以继续生成。')

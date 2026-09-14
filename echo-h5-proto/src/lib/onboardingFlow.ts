@@ -1,3 +1,4 @@
+import type { PhoneResolutionResult } from '../api/authContract'
 import type {
   OnboardingAnswer,
   OnboardingDetail,
@@ -108,4 +109,10 @@ export function recoverableMessage(lastOperation: OnboardingSnapshot['lastOperat
   if (lastOperation === 'refine_failed') return '这次细化没有完成，原来的候选还在。'
   if (lastOperation === 'confirm_failed') return '窗口还没有建立，确认后可以安全重试。'
   return null
+}
+
+export function shouldResumePrivateOnboarding(
+  result: Pick<PhoneResolutionResult, 'returnToAllowed' | 'nextAction'>,
+): boolean {
+  return result.returnToAllowed && result.nextAction === 'resume_private_onboarding'
 }
