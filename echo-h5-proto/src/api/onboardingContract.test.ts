@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { setSession } from './session'
 import {
   httpOnboardingApi,
+  resetOnboardingIdempotencyKeys,
   type OnboardingDetail,
   type OnboardingSnapshot,
 } from './onboardingContract'
@@ -24,6 +25,7 @@ function response(data: unknown, ok = true): Response {
 }
 
 afterEach(() => {
+  resetOnboardingIdempotencyKeys()
   vi.unstubAllGlobals()
 })
 
@@ -70,6 +72,24 @@ describe('Onboarding v1 HTTP consumer contract', () => {
     expect(new Headers(init.headers).get('Idempotency-Key')).toBeTruthy()
     expect(restored.snapshot.sessionVersion).toBe(3)
     expect(fetchMock.mock.calls[1][0]).toContain('/pet/onboarding/ob-1')
+  })
+
+  it('reuses the write key when the follow-up GET fails', async () => {
+    setSession({ token: 'token-1', accountId: 'acc-1', isGuest: false, hasPet: false })
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response({ snapshot: { ...snapshot, sessionVersion: 3, status: 'generating' } }))
+      .mockRejectedValueOnce(new TypeError('failed to fetch'))
+      .mockResolvedValueOnce(response({ snapshot: { ...snapshot, sessionVersion: 3, status: 'generating' } }))
+      .mockResolvedValueOnce(response(detail({ snapshot: { ...snapshot, sessionVersion: 3, status: 'generating' } })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(httpOnboardingApi.generate('ob-1', 2)).rejects.toMatchObject({ code: 'network_unavailable' })
+    const restored = await httpOnboardingApi.generate('ob-1', 2)
+    const firstKey = new Headers((fetchMock.mock.calls[0] as [string, RequestInit])[1].headers).get('Idempotency-Key')
+    const retryKey = new Headers((fetchMock.mock.calls[2] as [string, RequestInit])[1].headers).get('Idempotency-Key')
+    expect(firstKey).toBeTruthy()
+    expect(retryKey).toBe(firstKey)
+    expect(restored.snapshot.status).toBe('generating')
   })
 
   it('branches on stable error detail instead of translated HTTP copy', async () => {

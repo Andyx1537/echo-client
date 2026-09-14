@@ -176,16 +176,61 @@ interface MutationResult {
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 const ROOT = `${API_BASE.replace(/\/$/, '')}/api/v1`
 
+const IDEM_STORE = 'echo.private-onboarding.idempotency.v1'
+const memoryKeys = new Map<string, string>()
+
 export function newIdempotencyKey(): string {
   return globalThis.crypto?.randomUUID?.() ?? `ob-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-async function request<T>(path: string, init: RequestInit = {}, idempotent = false): Promise<T> {
+export function retainOnboardingIdempotencyKey(slot: string): string {
+  const keys = readIdempotencyKeys()
+  if (!keys[slot]) keys[slot] = newIdempotencyKey()
+  writeIdempotencyKeys(keys)
+  return keys[slot]
+}
+
+export function releaseOnboardingIdempotencyKey(slot: string): void {
+  const keys = readIdempotencyKeys()
+  delete keys[slot]
+  writeIdempotencyKeys(keys)
+}
+
+export function resetOnboardingIdempotencyKeys(): void {
+  memoryKeys.clear()
+  try {
+    globalThis.sessionStorage?.removeItem(IDEM_STORE)
+  } catch {
+    /* ignore */
+  }
+}
+
+function readIdempotencyKeys(): Record<string, string> {
+  try {
+    const raw = globalThis.sessionStorage?.getItem(IDEM_STORE)
+    if (raw) return JSON.parse(raw) as Record<string, string>
+  } catch {
+    /* fall through */
+  }
+  return Object.fromEntries(memoryKeys)
+}
+
+function writeIdempotencyKeys(keys: Record<string, string>): void {
+  memoryKeys.clear()
+  for (const [slot, key] of Object.entries(keys)) memoryKeys.set(slot, key)
+  try {
+    globalThis.sessionStorage?.setItem(IDEM_STORE, JSON.stringify(keys))
+  } catch {
+    /* ignore */
+  }
+}
+
+async function request<T>(path: string, init: RequestInit = {}, idempotent: boolean | string = false): Promise<T> {
   const token = getSession()?.token
   const headers = new Headers(init.headers)
   if (!(init.body instanceof FormData)) headers.set('Content-Type', 'application/json; charset=utf-8')
   if (token) headers.set('Authorization', `Bearer ${token}`)
-  if (idempotent) headers.set('Idempotency-Key', newIdempotencyKey())
+  if (idempotent) headers.set('Idempotency-Key', typeof idempotent === 'string' ? idempotent : newIdempotencyKey())
 
   let response: Response
   try {
@@ -229,17 +274,26 @@ function normalizeDetail(raw: OnboardingDetail): OnboardingDetail {
   }
 }
 
-async function refreshAfter(id: string, mutation: Promise<MutationResult>): Promise<OnboardingDetail> {
+async function refreshAfter(id: string, slot: string, mutation: Promise<MutationResult>): Promise<OnboardingDetail> {
   const changed = await mutation
-  const fresh = normalizeDetail(await request<OnboardingDetail>(`/pet/onboarding/${encodeURIComponent(id)}`, json('GET')))
-  return {
-    ...fresh,
-    subjectCandidates: fresh.subjectCandidates.length ? fresh.subjectCandidates : changed.subjectCandidates ?? [],
-    selectedSubject: fresh.selectedSubject ?? changed.selectedSubject,
-    crop: fresh.crop ?? changed.crop,
-    petId: changed.petId ?? fresh.petId,
-    windowId: changed.windowId ?? fresh.windowId,
+  try {
+    const fresh = normalizeDetail(await request<OnboardingDetail>(`/pet/onboarding/${encodeURIComponent(id)}`, json('GET')))
+    releaseOnboardingIdempotencyKey(slot)
+    return {
+      ...fresh,
+      subjectCandidates: fresh.subjectCandidates.length ? fresh.subjectCandidates : changed.subjectCandidates ?? [],
+      selectedSubject: fresh.selectedSubject ?? changed.selectedSubject,
+      crop: fresh.crop ?? changed.crop,
+      petId: changed.petId ?? fresh.petId,
+      windowId: changed.windowId ?? fresh.windowId,
+    }
+  } catch (error) {
+    throw error
   }
+}
+
+function mutate(id: string, slot: string, path: string, init: RequestInit): Promise<OnboardingDetail> {
+  return refreshAfter(id, slot, request(path, init, retainOnboardingIdempotencyKey(slot)))
 }
 
 const json = (method: string, body?: unknown): RequestInit => ({
@@ -249,37 +303,44 @@ const json = (method: string, body?: unknown): RequestInit => ({
 
 export const httpOnboardingApi: OnboardingApi = {
   create: async (petName) => {
+    const slot = `create:${petName ?? ''}`
     const snapshot = await request<OnboardingSnapshot>(
       '/pet/onboarding',
       json('POST', { flowVersion: 'v1', questionnaireVersion: 'v1', petName }),
-      true,
+      retainOnboardingIdempotencyKey(slot),
     )
-    return normalizeDetail(await request(`/pet/onboarding/${encodeURIComponent(snapshot.onboardingId)}`, json('GET')))
+    try {
+      const fresh = normalizeDetail(await request(`/pet/onboarding/${encodeURIComponent(snapshot.onboardingId)}`, json('GET')))
+      releaseOnboardingIdempotencyKey(slot)
+      return fresh
+    } catch (error) {
+      throw error
+    }
   },
   get: async (id) => normalizeDetail(await request(`/pet/onboarding/${encodeURIComponent(id)}`, json('GET'))),
   updateProfile: (id, petName, expectedSessionVersion) =>
-    refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}/profile`, json('PATCH', { petName, expectedSessionVersion }), true)),
+    mutate(id, `profile:${id}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}/profile`, json('PATCH', { petName, expectedSessionVersion })),
   upload: async (id, file, expectedSessionVersion) => {
     const form = new FormData()
     form.append('file', file)
     form.append('mediaType', file.type.startsWith('video/') ? 'video' : 'image')
     form.append('expectedSessionVersion', String(expectedSessionVersion))
-    return refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}/assets`, { method: 'POST', body: form }, true))
+    return mutate(id, `upload:${id}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}/assets`, { method: 'POST', body: form })
   },
   selectSubject: (id, subjectId, crop, expectedSessionVersion) =>
-    refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}/subject/select`, json('POST', { subjectId, crop, expectedSessionVersion }), true)),
+    mutate(id, `subject:${id}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}/subject/select`, json('POST', { subjectId, crop, expectedSessionVersion })),
   saveAnswer: (id, answer, expectedSessionVersion) =>
-    refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}/answers/${answer.questionId}`, json('PUT', { ...answer, expectedSessionVersion }), true)),
+    mutate(id, `answer:${id}:${answer.questionId}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}/answers/${answer.questionId}`, json('PUT', { ...answer, expectedSessionVersion })),
   setConsent: (id, granted, expectedSessionVersion) =>
-    refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}/consent`, json('PUT', { granted, policyVersion: 'memory-use-v1', expectedSessionVersion }), true)),
+    mutate(id, `consent:${id}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}/consent`, json('PUT', { granted, policyVersion: 'memory-use-v1', expectedSessionVersion })),
   generate: (id, expectedSessionVersion) =>
-    refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}/generate`, json('POST', { expectedSessionVersion }), true)),
+    mutate(id, `generate:${id}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}/generate`, json('POST', { expectedSessionVersion })),
   selectCandidate: (id, candidateId, expectedSessionVersion) =>
-    refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}/candidates/${encodeURIComponent(candidateId)}/select`, json('POST', { expectedSessionVersion }), true)),
+    mutate(id, `candidate:${id}:${candidateId}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}/candidates/${encodeURIComponent(candidateId)}/select`, json('POST', { expectedSessionVersion })),
   refine: (id, candidateId, adjustmentCode, expectedSessionVersion) =>
-    refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}/refine`, json('POST', { candidateId, adjustmentCode, expectedSessionVersion }), true)),
+    mutate(id, `refine:${id}:${candidateId}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}/refine`, json('POST', { candidateId, adjustmentCode, expectedSessionVersion })),
   confirm: (id, candidateId, consentVersion, expectedSessionVersion) =>
-    refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}/confirm`, json('POST', { candidateId, consentVersion, expectedSessionVersion }), true)),
+    mutate(id, `confirm:${id}:${candidateId}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}/confirm`, json('POST', { candidateId, consentVersion, expectedSessionVersion })),
   abandon: (id, expectedSessionVersion) =>
-    refreshAfter(id, request(`/pet/onboarding/${encodeURIComponent(id)}`, json('DELETE', { expectedSessionVersion }), true)),
+    mutate(id, `abandon:${id}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}`, json('DELETE', { expectedSessionVersion })),
 }
