@@ -4,6 +4,7 @@ export { hasUnread, loadInbox } from './inbox'
 export { cardIdOfArrival, isArrivalId, mergeArrivals } from './arrivals'
 export { track } from './track'
 export type { TrackEvent } from './track'
+export { reportPlazaSeen, reportWorkOpened } from './phase0'
 export { getSession, setSession, patchSession, clearSession } from './session'
 export { ApiError } from './backend'
 export type {

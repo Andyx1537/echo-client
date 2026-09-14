@@ -825,6 +825,33 @@ export interface ResubmitWorkResult {
   moderationId: string
 }
 
+export type BehaviorPurpose = 'ui_adaptation' | 'public_recommendation' | 'private_generation'
+
+export interface BehaviorEventInput {
+  idempotencyKey: string
+  eventName: string
+  sessionId: string
+  surface: 'private_onboarding' | 'first_generation' | 'plaza' | 'work_detail'
+  targetType: string
+  targetId?: string
+  activeDurationMs?: number
+  foregroundDurationMs?: number
+  loadWaitMs?: number
+  attemptCount?: number
+  backtrackCount?: number
+  context?: Record<string, unknown>
+  occurredAt: string
+  schemaVersion: 1
+  purposeCode: BehaviorPurpose
+}
+
+export interface BehaviorEventResult {
+  idempotencyKey: string | null
+  status: 'accepted' | 'duplicate' | 'rejected'
+  eventId: string | null
+  reasonCode: string | null
+}
+
 export const WORK_STATUS_LABELS: Record<WorkStatus, string> = {
   draft: '草稿',
   pending: '审核中',

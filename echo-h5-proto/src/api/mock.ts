@@ -1294,6 +1294,16 @@ export const mockBackend: EchoBackend = {
     const all = mockFeed(worksState(d)).filter((w) => ids.has(w.id))
     return slicePage(all, cursor)
   },
+  async reportBehaviorEvents(events) {
+    return {
+      results: events.map((event) => ({
+        idempotencyKey: event.idempotencyKey,
+        status: 'accepted' as const,
+        eventId: `evt_${event.idempotencyKey}`,
+        reasonCode: null,
+      })),
+    }
+  },
 }
 
 function toApiError(error: unknown): ApiError {

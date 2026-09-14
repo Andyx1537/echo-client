@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Work } from '../types'
 import { api } from '../api'
+import { reportPlazaSeen } from '../api/phase0'
 import AiGeneratedBadge from './AiGeneratedBadge'
 
 interface Props {
@@ -28,6 +29,7 @@ export default function PlazaScreen({ onOpen, onOpenSearch, guest = false }: Pro
         if (!alive) return
         setWorks(res.items)
         setCursor(res.nextCursor)
+        reportPlazaSeen(res.items)
       })
       .finally(() => alive && setLoading(false))
     return () => {

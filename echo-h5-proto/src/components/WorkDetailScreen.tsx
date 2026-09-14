@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
+import { reportWorkOpened } from '../api/phase0'
 import { newIdempotencyKey } from '../api/authCredentialStore'
 import type { Work, WorkComment, WorkCommentThread, WorkCommentsPage } from '../types'
 import AiGeneratedBadge from './AiGeneratedBadge'
@@ -42,6 +43,7 @@ export default function WorkDetailScreen({ workId, guest = false, onBack, onIden
         if (!alive) return
         setWork(detail.work)
         setPage(comments)
+        reportWorkOpened(detail.work)
       })
       .catch(() => {
         if (alive) setMissing(true)

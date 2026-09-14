@@ -34,6 +34,8 @@ import type {
   ResubmitWorkResult,
   WorkComment,
   WorkCommentsPage,
+  BehaviorEventInput,
+  BehaviorEventResult,
   MuteDuration,
   SpectrumNodeView,
   ShadowAreaView,
@@ -297,6 +299,7 @@ export interface EchoBackend {
   favoriteWork(workId: string): Promise<{ workId: string; favorited: true }>
   unfavoriteWork(workId: string): Promise<{ workId: string; favorited: false }>
   myFavorites(cursor?: string): Promise<Paged<Work>>
+  reportBehaviorEvents(events: BehaviorEventInput[]): Promise<{ results: BehaviorEventResult[] }>
 }
 
 /**

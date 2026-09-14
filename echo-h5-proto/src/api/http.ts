@@ -32,6 +32,8 @@ import type {
   ResubmitWorkResult,
   WorkComment,
   WorkCommentsPage,
+  BehaviorEventInput,
+  BehaviorEventResult,
   MuteDuration,
 } from '../types'
 import {
@@ -329,4 +331,6 @@ export const httpBackend: EchoBackend = {
   unfavoriteWork: (workId) =>
     del<{ workId: string; favorited: false }>(`/works/${encodeURIComponent(workId)}/favorite`),
   myFavorites: (cursor) => get<Paged<Work>>(`/me/favorites${pageQuery(cursor)}`),
+  reportBehaviorEvents: (events: BehaviorEventInput[]) =>
+    post<{ results: BehaviorEventResult[] }>('/behavior-events/batch', { events }),
 }
