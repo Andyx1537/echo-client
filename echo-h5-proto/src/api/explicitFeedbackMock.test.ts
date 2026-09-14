@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { resetExplicitFeedback, submitExplicitFeedback } from './explicitFeedbackMock'
+import { adaptationProfile, resetExplicitFeedback, setRecommendationMode, submitExplicitFeedback } from './explicitFeedbackMock'
 import type { ExplicitFeedbackInput } from '../types'
 
 const base: ExplicitFeedbackInput = {
@@ -22,5 +22,12 @@ describe('explicit feedback mock', () => {
     expect(same.feedbackId).toBe(first.feedbackId)
     expect(changed.supersedesId).toBe(first.feedbackId)
     expect(changed.status).toBe('active')
+  })
+
+  it('can close personalization without dropping the answer', () => {
+    submitExplicitFeedback('a1', base)
+    const closed = setRecommendationMode('a1', 'non_personalized')
+    expect(closed.publicRecommendation.enabled).toBe(false)
+    expect(adaptationProfile('a1').recommendationMode).toBe('non_personalized')
   })
 })

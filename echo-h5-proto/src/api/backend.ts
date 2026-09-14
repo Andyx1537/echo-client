@@ -38,6 +38,8 @@ import type {
   BehaviorEventResult,
   ExplicitFeedbackInput,
   ExplicitFeedbackResult,
+  AdaptationProfile,
+  BehaviorPurpose,
   MuteDuration,
   SpectrumNodeView,
   ShadowAreaView,
@@ -303,6 +305,9 @@ export interface EchoBackend {
   myFavorites(cursor?: string): Promise<Paged<Work>>
   reportBehaviorEvents(events: BehaviorEventInput[]): Promise<{ results: BehaviorEventResult[] }>
   submitExplicitFeedback(input: ExplicitFeedbackInput): Promise<ExplicitFeedbackResult>
+  adaptationProfile(): Promise<AdaptationProfile>
+  clearAdaptationProfile(scope: BehaviorPurpose): Promise<AdaptationProfile>
+  setRecommendationMode(mode: 'personalized' | 'non_personalized'): Promise<AdaptationProfile>
 }
 
 /**

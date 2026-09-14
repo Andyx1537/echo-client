@@ -62,7 +62,12 @@ import {
   mockReplyComment,
   type SocialMockState,
 } from './workSocialMock'
-import { submitExplicitFeedback as saveExplicitFeedback } from './explicitFeedbackMock'
+import {
+  adaptationProfile as readAdaptationProfile,
+  clearAdaptationProfile as clearAdaptation,
+  setRecommendationMode as writeRecommendationMode,
+  submitExplicitFeedback as saveExplicitFeedback,
+} from './explicitFeedbackMock'
 import { normalizeQuery, runSearch } from './searchLogic'
 import {
   ApiError,
@@ -1307,6 +1312,15 @@ export const mockBackend: EchoBackend = {
   },
   async submitExplicitFeedback(input) {
     return saveExplicitFeedback(load().accountId, input)
+  },
+  async adaptationProfile() {
+    return readAdaptationProfile(load().accountId)
+  },
+  async clearAdaptationProfile(scope) {
+    return clearAdaptation(load().accountId, scope)
+  },
+  async setRecommendationMode(mode) {
+    return writeRecommendationMode(load().accountId, mode)
   },
 }
 

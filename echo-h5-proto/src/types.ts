@@ -868,6 +868,17 @@ export interface ExplicitFeedbackResult {
   supersedesId: string | null
 }
 
+export interface AdaptationDomain {
+  enabled: boolean
+}
+
+export interface AdaptationProfile {
+  recommendationMode: 'personalized' | 'non_personalized'
+  uiAdaptation: AdaptationDomain
+  publicRecommendation: AdaptationDomain
+  privateGeneration: AdaptationDomain
+}
+
 export const WORK_STATUS_LABELS: Record<WorkStatus, string> = {
   draft: '草稿',
   pending: '审核中',

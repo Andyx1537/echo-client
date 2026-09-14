@@ -36,6 +36,8 @@ import type {
   BehaviorEventResult,
   ExplicitFeedbackInput,
   ExplicitFeedbackResult,
+  AdaptationProfile,
+  BehaviorPurpose,
   MuteDuration,
 } from '../types'
 import {
@@ -337,4 +339,9 @@ export const httpBackend: EchoBackend = {
     post<{ results: BehaviorEventResult[] }>('/behavior-events/batch', { events }),
   submitExplicitFeedback: (input: ExplicitFeedbackInput) =>
     post<ExplicitFeedbackResult>('/me/explicit-feedback', input),
+  adaptationProfile: () => get<AdaptationProfile>('/me/adaptation-profile'),
+  clearAdaptationProfile: (scope: BehaviorPurpose) =>
+    del<AdaptationProfile>(`/me/adaptation-profile?scope=${encodeURIComponent(scope)}`),
+  setRecommendationMode: (mode: AdaptationProfile['recommendationMode']) =>
+    put<AdaptationProfile>('/me/recommendation-mode', { mode }),
 }

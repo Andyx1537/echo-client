@@ -1,5 +1,5 @@
 import { ApiError } from './backend'
-import type { ExplicitFeedbackInput, ExplicitFeedbackResult } from '../types'
+import type { AdaptationProfile, BehaviorPurpose, ExplicitFeedbackInput, ExplicitFeedbackResult } from '../types'
 
 const ANSWERS: Record<ExplicitFeedbackInput['questionCode'], string[]> = {
   likeness: ['looks_like_it', 'somewhat_like_it', 'not_like_it'],
@@ -19,10 +19,45 @@ interface Row extends ExplicitFeedbackResult {
 
 let rows: Row[] = []
 let seq = 1
+const modes = new Map<string, AdaptationProfile['recommendationMode']>()
+const cleared = new Map<string, Set<BehaviorPurpose>>()
 
 export function resetExplicitFeedback(): void {
   rows = []
   seq = 1
+  modes.clear()
+  cleared.clear()
+}
+
+function domain(accountId: string, scope: BehaviorPurpose): { enabled: boolean } {
+  if (scope === 'public_recommendation' && modes.get(accountId) === 'non_personalized') {
+    return { enabled: false }
+  }
+  return { enabled: !(cleared.get(accountId)?.has(scope) ?? false) }
+}
+
+export function adaptationProfile(accountId: string): AdaptationProfile {
+  return {
+    recommendationMode: modes.get(accountId) ?? 'personalized',
+    uiAdaptation: domain(accountId, 'ui_adaptation'),
+    publicRecommendation: domain(accountId, 'public_recommendation'),
+    privateGeneration: domain(accountId, 'private_generation'),
+  }
+}
+
+export function clearAdaptationProfile(accountId: string, scope: BehaviorPurpose): AdaptationProfile {
+  const set = cleared.get(accountId) ?? new Set<BehaviorPurpose>()
+  set.add(scope)
+  cleared.set(accountId, set)
+  return adaptationProfile(accountId)
+}
+
+export function setRecommendationMode(
+  accountId: string,
+  mode: AdaptationProfile['recommendationMode'],
+): AdaptationProfile {
+  modes.set(accountId, mode)
+  return adaptationProfile(accountId)
 }
 
 export function submitExplicitFeedback(accountId: string, input: ExplicitFeedbackInput): ExplicitFeedbackResult {
