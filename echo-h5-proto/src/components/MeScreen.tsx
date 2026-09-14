@@ -14,6 +14,7 @@ interface Props {
   onOpenSpectrum: () => void
   /** 打开「我的作品」（t_work） */
   onOpenWorks: () => void
+  onOpenFavorites: () => void
   /** 绑定/可见性变更后请求父级刷新会话与档案 */
   onRefresh: () => void
 }
@@ -28,7 +29,7 @@ const VISIBILITY_OPTIONS: Array<{ key: Visibility; hint: string }> = [
 ]
 
 /** 我：个人主页 / 光谱入口 / 设置(可见性三档) / 订阅·付费档位 / 账号(游客→绑定) / 被记得回响 */
-export default function MeScreen({ me, pet, onOpenSpectrum, onOpenWorks, onRefresh }: Props) {
+export default function MeScreen({ me, pet, onOpenSpectrum, onOpenWorks, onOpenFavorites, onRefresh }: Props) {
   const { login } = usePhoneLogin()
   // 自己那扇窗的窗口键；暖光块按它取数（`GET /windows/:petId/remember`）
   const myPetId = myWindowPetId(pet)
@@ -118,6 +119,15 @@ export default function MeScreen({ me, pet, onOpenSpectrum, onOpenWorks, onRefre
       </div>
 
       {/* —— 我的作品入口（t_work）—— */}
+      <button className="spectrum-entry me-spectrum" onClick={onOpenFavorites}>
+        <span className="se-ico">📌</span>
+        <span className="se-text">
+          <b>我的收藏</b>
+          <em>只给你自己看的那一叠</em>
+        </span>
+        <span className="se-arrow">→</span>
+      </button>
+
       <button className="spectrum-entry me-spectrum" onClick={onOpenWorks}>
         <span className="se-ico">🖼</span>
         <span className="se-text">

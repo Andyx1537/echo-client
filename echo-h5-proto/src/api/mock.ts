@@ -12,6 +12,7 @@ import type {
   Message,
   MyPet,
   OnboardingCandidate,
+  AuthorWorksPage,
   Paged,
   Postcard,
   PostcardSkin,
@@ -31,20 +32,42 @@ import type {
   FeatureFlags,
   MessageDisposition,
   PendingMessage,
-  PlazaCard,
+  Work,
   ReactionArrival,
   ReactionKind,
-  Work,
   PublishWorkInput,
+  PublishWorkResult,
+  DraftWorkInput,
+  ResubmitWorkResult,
 } from '../types'
 import { cardIdOfArrival } from './arrivals'
 import {
   freshWorks,
+  mockPlazaWorks,
+  mockAuthorView,
   mockAuthorWorks,
   mockFeed,
   mockPublish,
+  mockResubmit,
+  mockSaveDraft,
+  mockSubmissionCapability,
+  type MockReviewEvidence,
   type WorksMockState,
 } from './worksMock'
+import {
+  freshSocial,
+  mockCommentPage,
+  mockDeleteComment,
+  mockPostComment,
+  mockReplyComment,
+  type SocialMockState,
+} from './workSocialMock'
+import {
+  adaptationProfile as readAdaptationProfile,
+  clearAdaptationProfile as clearAdaptation,
+  setRecommendationMode as writeRecommendationMode,
+  submitExplicitFeedback as saveExplicitFeedback,
+} from './explicitFeedbackMock'
 import { normalizeQuery, runSearch } from './searchLogic'
 import {
   ApiError,
@@ -80,7 +103,7 @@ const DB_KEY = 'echo.mock.db'
 // v4：移除手写的回应到达 m-2 / m-5，改由 seedReactionArrivals + mergeArrivals 产生
 // （`PRODUCT-MINDMAP §6.2 B20`）。不 bump 的话，装过旧版本的人会继续看到 m-5 里
 // 那句「轻轻留下了一束心意」——正是本轮判定为越线的措辞。
-const DB_VERSION = 4
+const DB_VERSION = 5
 const DAILY_FREE = 5
 /** 一次「补充心意」到账的额度（离线可跑；契约 §0.7 #3「献花可买」） */
 const FLOWER_TOPUP_COUNT = 10
@@ -89,7 +112,6 @@ const FLOWER_TOPUP_COUNT = 10
  * 广场瀑布与「进窗后连续下翻」（D21/TC-13）共用同一条流、同一个游标。
  * 离线可翻的总条数以本地种子窗口数为上限，翻完给温柔收尾态（不空白、不报错）。
  */
-const PLAZA_PAGE_SIZE = 6
 /**
  * 「被接住」的到达每页多少**张卡**（与真后端 `limit` 默认值一致）。
  * 🔴 单位是卡不是回应行——见 `reactionArrivals` 的注释。
@@ -164,6 +186,11 @@ interface MockDB {
   arrivals?: ReactionArrival[]
   /** 作品（t_work）。旧缓存可缺省，读取一律走 worksOf() 兜底 */
   works?: Work[]
+  reviewEvidences?: MockReviewEvidence[]
+  /** 匿名共鸣厅批次。绑定后不用。旧缓存可缺省 */
+  plazaBatch?: { ids: string[]; startedAt: number }
+  comments?: SocialMockState['comments']
+  favorites?: SocialMockState['favorites']
 }
 
 const AVATAR_POOL = [
@@ -737,32 +764,15 @@ export const mockBackend: EchoBackend = {
     }
   },
 
-  async plaza(cursor): Promise<Paged<PlazaCard>> {
+  async plaza(cursor): Promise<Paged<Work>> {
     await delay(120)
-    // 游标 = 下一页起始偏移（离线实现细节；前端只认 nextCursor 不解析其含义）
-    const start = Math.max(0, Number(cursor ?? 0) || 0)
-    const slice = catalog.slice(start, start + PLAZA_PAGE_SIZE)
-    const end = start + slice.length
-    // 用暖光浓度呈现，去精确数字
-    const items: PlazaCard[] = slice.map((w) => ({
-      id: w.id,
-      petId: w.petId,
-      title: w.title ?? w.petName,
-      excerpt: w.recent,
-      cover: w.cover.imageUrl ?? '',
-      hasCover: Boolean(w.cover.imageUrl),
-      sourceType: 'record',
-      topicIds: w.category ? [w.category] : [],
-      publishedAt: null,
-      presentation: {
-        category: w.category,
-        cover: w.cover,
-        ownerName: w.ownerName,
-        ownerAvatar: w.ownerAvatar,
-        ownerAccountType: w.ownerAccountType,
-      },
-    }))
-    return { items, nextCursor: end < catalog.length ? String(end) : null }
+    const d = load()
+    const page = mockPlazaWorks(worksState(d), d.isGuest, d.plazaBatch, Date.now())
+    if (d.isGuest && page.batch && page.batch !== d.plazaBatch) {
+      d.plazaBatch = page.batch
+      save()
+    }
+    return slicePage(page.items, cursor)
   },
 
   async windowDetail(rawWindowId): Promise<WindowDetail> {
@@ -1114,16 +1124,23 @@ export const mockBackend: EchoBackend = {
 
   // ============================================================ 作品（t_work）
 
-  async publishWork(input: PublishWorkInput): Promise<{ work: Work; message: string }> {
+  async publishWork(input: PublishWorkInput): Promise<PublishWorkResult> {
     await delay(240)
     const d = load()
     const state = worksState(d)
-    // mock 里 mediaKey 就是 upload 返回的 objectURL 资源 id，直接当地址用
-    const work = mockPublish(state, input, d.accountId, input.mediaKey, input.posterKey ?? '')
-    d.works = state.works
-    save()
-    // 🔴 「已提交」不是「已发布」：落 pending，还要过审，广场上现在还看不到它
-    return { work, message: '已提交，过一会儿就能在广场看到它了。' }
+    const occupying = mockSubmissionCapability(state, d.accountId)
+    if (!occupying.canSubmitWork) {
+      throw new ApiError(3002, '还有一条作品正在处理，先等它走完再发新的。', 'submission_slot_occupied')
+    }
+    try {
+      const result = mockPublish(state, input, d.accountId, input.mediaKey, input.posterKey ?? '')
+      d.works = state.works
+      d.reviewEvidences = state.evidences
+      save()
+      return result
+    } catch (error) {
+      throw toApiError(error)
+    }
   },
 
   async works(cursor): Promise<Paged<Work>> {
@@ -1132,18 +1149,57 @@ export const mockBackend: EchoBackend = {
     return slicePage(all, cursor)
   },
 
-  async userWorks(userId, cursor): Promise<Paged<Work>> {
+  async userWorks(userId, cursor): Promise<AuthorWorksPage> {
     await delay(120)
     const d = load()
-    const all = mockAuthorWorks(worksState(d), userId, userId === d.accountId)
-    return slicePage(all, cursor)
+    const state = worksState(d)
+    const all = mockAuthorWorks(state, userId, userId === d.accountId)
+    return {
+      ...slicePage(all, cursor),
+      ...(userId === d.accountId ? { submissionCapability: mockSubmissionCapability(state, userId) } : {}),
+    }
   },
 
   async workDetail(workId): Promise<{ work: Work }> {
     await delay(90)
-    const found = worksState(load()).works.find((w) => w.id === workId)
+    const d = load()
+    const found = worksState(d).works.find((w) => w.id === workId)
     if (!found) throw new ApiError(2004, '这个作品找不到了。')
-    return { work: found }
+    const self = found.authorId === d.accountId
+    if (!self && found.status && found.status !== 'public') {
+      throw new ApiError(2004, '这个作品找不到了。')
+    }
+    const view = mockAuthorView(found, self)
+    if (!d.isGuest) view.favorited = socialState(d).favorites.some((f) => f.accountId === d.accountId && f.workId === workId)
+    return { work: view }
+  },
+
+  async saveWorkDraft(workId, input: DraftWorkInput): Promise<{ work: Work; contentVersion: number; status: string }> {
+    await delay(180)
+    const d = load()
+    const state = worksState(d)
+    try {
+      const work = mockSaveDraft(state, workId, d.accountId, input)
+      d.works = state.works
+      save()
+      return { work, contentVersion: work.contentVersion ?? 1, status: work.status ?? 'rejected' }
+    } catch (e) {
+      throw toApiError(e)
+    }
+  },
+
+  async resubmitWork(workId, input): Promise<ResubmitWorkResult> {
+    await delay(220)
+    const d = load()
+    const state = worksState(d)
+    try {
+      const result = mockResubmit(state, workId, d.accountId, input.contentVersion, input.idempotencyKey)
+      d.works = state.works
+      save()
+      return result
+    } catch (e) {
+      throw toApiError(e)
+    }
   },
 
   async deleteWork(workId): Promise<{ ok: boolean }> {
@@ -1157,14 +1213,141 @@ export const mockBackend: EchoBackend = {
     save()
     return { ok: true }
   },
+
+  async workComments(workId, cursor, sort = 'hot') {
+    await delay(80)
+    const d = load()
+    return mockCommentPage(socialState(d), workId, d.isGuest, sort, cursor)
+  },
+  async commentReplies(rootCommentId, cursor) {
+    await delay(80)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    const replies = socialState(d).comments
+      .filter((c) => c.rootCommentId === rootCommentId && c.displayState === 'visible')
+      .sort((a, b) => a.createdAt - b.createdAt)
+    const start = Math.max(0, Number(cursor ?? 0) || 0)
+    const items = replies.slice(start, start + 20)
+    return { items, nextCursor: start + items.length < replies.length ? String(start + items.length) : null }
+  },
+  async postWorkComment(workId, body, _key) {
+    await delay(120)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    const comment = mockPostComment(socialState(d), workId, d.accountId, d.nickname, body)
+    d.comments = socialState(d).comments
+    save()
+    return { comment, visibleCommentCount: socialState(d).comments.filter((c) => c.workId === workId && c.displayState === 'visible').length }
+  },
+  async replyToComment(commentId, body, _key) {
+    await delay(120)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    try {
+      const comment = mockReplyComment(socialState(d), commentId, d.accountId, d.nickname, body)
+      d.comments = socialState(d).comments
+      save()
+      return {
+        comment,
+        rootCommentId: comment.rootCommentId ?? comment.commentId,
+        replyToCommentId: comment.replyToCommentId ?? comment.commentId,
+        visibleCommentCount: socialState(d).comments.filter((c) => c.workId === comment.workId && c.displayState === 'visible').length,
+      }
+    } catch (e) {
+      throw toApiError(e)
+    }
+  },
+  async deleteComment(commentId) {
+    await delay(100)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    try {
+      const result = mockDeleteComment(socialState(d), commentId, d.accountId)
+      d.comments = socialState(d).comments
+      save()
+      return result
+    } catch (e) {
+      throw toApiError(e)
+    }
+  },
+  async favoriteWork(workId) {
+    await delay(80)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    const state = socialState(d)
+    if (!state.favorites.some((f) => f.accountId === d.accountId && f.workId === workId)) {
+      state.favorites = [...state.favorites, { accountId: d.accountId, workId, createdAt: Date.now() }]
+    }
+    d.favorites = state.favorites
+    save()
+    return { workId, favorited: true as const }
+  },
+  async unfavoriteWork(workId) {
+    await delay(80)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    const state = socialState(d)
+    state.favorites = state.favorites.filter((f) => !(f.accountId === d.accountId && f.workId === workId))
+    d.favorites = state.favorites
+    save()
+    return { workId, favorited: false as const }
+  },
+  async myFavorites(cursor) {
+    await delay(80)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    const ids = new Set(socialState(d).favorites.filter((f) => f.accountId === d.accountId).map((f) => f.workId))
+    const all = mockFeed(worksState(d)).filter((w) => ids.has(w.id))
+    return slicePage(all, cursor)
+  },
+  async reportBehaviorEvents(events) {
+    return {
+      results: events.map((event) => ({
+        idempotencyKey: event.idempotencyKey,
+        status: 'accepted' as const,
+        eventId: `evt_${event.idempotencyKey}`,
+        reasonCode: null,
+      })),
+    }
+  },
+  async submitExplicitFeedback(input) {
+    return saveExplicitFeedback(load().accountId, input)
+  },
+  async adaptationProfile() {
+    return readAdaptationProfile(load().accountId)
+  },
+  async clearAdaptationProfile(scope) {
+    return clearAdaptation(load().accountId, scope)
+  },
+  async setRecommendationMode(mode) {
+    return writeRecommendationMode(load().accountId, mode)
+  },
+}
+
+function toApiError(error: unknown): ApiError {
+  if (error instanceof ApiError) return error
+  const extra = error as { code?: number; detail?: string; message?: string }
+  return new ApiError(extra.code ?? 2001, extra.message ?? '没能发出去，再试一次？', extra.detail)
 }
 
 /** 旧 localStorage 缓存里没有 works 字段，兜底建一份种子，不为此 bump DB_VERSION。 */
+function socialState(d: MockDB): SocialMockState {
+  const works = worksState(d)
+  const fresh = freshSocial(works.works)
+  if (!d.comments) d.comments = fresh.comments
+  if (!d.favorites) d.favorites = fresh.favorites
+  return { comments: d.comments, favorites: d.favorites }
+}
+
 function worksState(d: MockDB): WorksMockState {
+  const fresh = freshWorks(d.accountId)
   if (!d.works) {
-    d.works = freshWorks(d.accountId).works
+    d.works = fresh.works
   }
-  return { works: d.works }
+  if (!d.reviewEvidences) {
+    d.reviewEvidences = fresh.evidences
+  }
+  return { works: d.works, evidences: d.reviewEvidences }
 }
 
 /** 游标 = 下一页起始偏移，与 plaza 同一套（前端只认 nextCursor，不解析其含义）。 */

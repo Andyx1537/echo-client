@@ -13,8 +13,8 @@ import type {
   MessageDisposition,
   MyPet,
   PendingMessage,
-  PlazaCard,
   OnboardingCandidate,
+  AuthorWorksPage,
   Paged,
   Postcard,
   PostcardSkin,
@@ -29,6 +29,17 @@ import type {
   Window,
   Work,
   PublishWorkInput,
+  PublishWorkResult,
+  DraftWorkInput,
+  ResubmitWorkResult,
+  WorkComment,
+  WorkCommentsPage,
+  BehaviorEventInput,
+  BehaviorEventResult,
+  ExplicitFeedbackInput,
+  ExplicitFeedbackResult,
+  AdaptationProfile,
+  BehaviorPurpose,
   MuteDuration,
   SpectrumNodeView,
   ShadowAreaView,
@@ -179,7 +190,7 @@ export interface EchoBackend {
   rememberWall(petId: PetId): Promise<RememberWall>
 
   // 6. 窗口页 / 广场
-  plaza(cursor?: string): Promise<Paged<PlazaCard>>
+  plaza(cursor?: string): Promise<Paged<Work>>
   windowDetail(petId: PetId): Promise<WindowDetail>
   windowSeen(petId: PetId): Promise<{ ok: boolean }>
   insights(): Promise<Insights>
@@ -274,14 +285,29 @@ export interface EchoBackend {
   spectrumIntegrate(id: string): Promise<{ node: SpectrumNodeView }>
 
   // 12. 作品（t_work / WorksApi）。补的是主线第 10 步：此前服务端没有任何发布入口。
-  /** 发布作品。🔴 成功回执是「已提交」不是「已发布」——落库为 pending，还要过审 */
-  publishWork(input: PublishWorkInput): Promise<{ work: Work; message: string }>
+  /** 发布作品。默认「已提交」；凭证可复用时才是已经公开。 */
+  publishWork(input: PublishWorkInput): Promise<PublishWorkResult>
   /** 作品瀑布 */
   works(cursor?: string): Promise<Paged<Work>>
   /** 个人作品页。自己看自己时会带上 status/visibility */
-  userWorks(userId: string, cursor?: string): Promise<Paged<Work>>
+  userWorks(userId: string, cursor?: string): Promise<AuthorWorksPage>
   workDetail(workId: string): Promise<{ work: Work }>
+  saveWorkDraft(workId: string, input: DraftWorkInput): Promise<{ work: Work; contentVersion: number; status: string }>
+  resubmitWork(workId: string, input: { contentVersion: number; idempotencyKey: string }): Promise<ResubmitWorkResult>
   deleteWork(workId: string): Promise<{ ok: boolean }>
+  workComments(workId: string, cursor?: string, sort?: 'hot' | 'latest'): Promise<WorkCommentsPage>
+  commentReplies(rootCommentId: string, cursor?: string): Promise<Paged<WorkComment>>
+  postWorkComment(workId: string, body: string, idempotencyKey: string): Promise<{ comment: WorkComment; visibleCommentCount: number }>
+  replyToComment(commentId: string, body: string, idempotencyKey: string): Promise<{ comment: WorkComment; rootCommentId: string; replyToCommentId: string; visibleCommentCount: number }>
+  deleteComment(commentId: string): Promise<{ commentId: string; displayState: string; cascadedReplyCount: number; visibleCommentCount: number }>
+  favoriteWork(workId: string): Promise<{ workId: string; favorited: true }>
+  unfavoriteWork(workId: string): Promise<{ workId: string; favorited: false }>
+  myFavorites(cursor?: string): Promise<Paged<Work>>
+  reportBehaviorEvents(events: BehaviorEventInput[]): Promise<{ results: BehaviorEventResult[] }>
+  submitExplicitFeedback(input: ExplicitFeedbackInput): Promise<ExplicitFeedbackResult>
+  adaptationProfile(): Promise<AdaptationProfile>
+  clearAdaptationProfile(scope: BehaviorPurpose): Promise<AdaptationProfile>
+  setRecommendationMode(mode: 'personalized' | 'non_personalized'): Promise<AdaptationProfile>
 }
 
 /**

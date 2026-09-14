@@ -11,9 +11,9 @@ import type {
   Message,
   MyPet,
   OnboardingCandidate,
+  AuthorWorksPage,
   Paged,
   PendingMessage,
-  PlazaCard,
   Postcard,
   PostcardSkin,
   PurchaseResult,
@@ -27,6 +27,17 @@ import type {
   Visibility,
   Window,
   Work,
+  DraftWorkInput,
+  PublishWorkResult,
+  ResubmitWorkResult,
+  WorkComment,
+  WorkCommentsPage,
+  BehaviorEventInput,
+  BehaviorEventResult,
+  ExplicitFeedbackInput,
+  ExplicitFeedbackResult,
+  AdaptationProfile,
+  BehaviorPurpose,
   MuteDuration,
 } from '../types'
 import {
@@ -90,6 +101,12 @@ async function request<T>(
 function post<T>(path: string, body?: unknown): Promise<T> {
   return request<T>(path, {
     method: 'POST',
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+}
+function put<T>(path: string, body?: unknown): Promise<T> {
+  return request<T>(path, {
+    method: 'PUT',
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 }
@@ -185,7 +202,7 @@ export const httpBackend: EchoBackend = {
   rememberWall: (windowId) =>
     get<RememberWall>(`/windows/${encodeURIComponent(windowId)}/remember`),
 
-  plaza: (cursor) => get<Paged<PlazaCard>>(`/plaza${pageQuery(cursor)}`),
+  plaza: (cursor) => get<Paged<Work>>(`/plaza${pageQuery(cursor)}`),
   windowDetail: (windowId) =>
     get<WindowDetail>(`/windows/${encodeURIComponent(windowId)}`),
   windowSeen: (windowId) =>
@@ -282,10 +299,49 @@ export const httpBackend: EchoBackend = {
 
   // 作品（WorksApi）。🔴 这几个方法的字段是照着服务端 WorkView 抄的，
   // 不是照着渲染需要设计的——广场页反着做的后果见 PRODUCT-IMPLEMENTATION-AUDIT §0b。
-  publishWork: (input) => post<{ work: Work; message: string }>('/works', input),
+  publishWork: (input) => post<PublishWorkResult>('/works', input),
   works: (cursor) => get<Paged<Work>>(`/works${pageQuery(cursor)}`),
   userWorks: (userId, cursor) =>
-    get<Paged<Work>>(`/users/${encodeURIComponent(userId)}/works${pageQuery(cursor)}`),
+    get<AuthorWorksPage>(`/users/${encodeURIComponent(userId)}/works${pageQuery(cursor)}`),
   workDetail: (workId) => get<{ work: Work }>(`/works/${encodeURIComponent(workId)}`),
+  saveWorkDraft: (workId, input: DraftWorkInput) =>
+    put<{ work: Work; contentVersion: number; status: string }>(
+      `/works/${encodeURIComponent(workId)}/draft`,
+      input,
+    ),
+  resubmitWork: (workId, input) =>
+    post<ResubmitWorkResult>(`/works/${encodeURIComponent(workId)}/resubmit`, input),
   deleteWork: (workId) => del<{ ok: boolean }>(`/works/${encodeURIComponent(workId)}`),
+  workComments: (workId, cursor, sort = 'hot') =>
+    get<WorkCommentsPage>(`/works/${encodeURIComponent(workId)}/comments?sort=${sort}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`),
+  commentReplies: (rootCommentId, cursor) =>
+    get<Paged<WorkComment>>(`/comments/${encodeURIComponent(rootCommentId)}/replies${pageQuery(cursor)}`),
+  postWorkComment: (workId, body, idempotencyKey) =>
+    post<{ comment: WorkComment; visibleCommentCount: number }>(
+      `/works/${encodeURIComponent(workId)}/comments`,
+      { body, idempotencyKey },
+    ),
+  replyToComment: (commentId, body, idempotencyKey) =>
+    post<{ comment: WorkComment; rootCommentId: string; replyToCommentId: string; visibleCommentCount: number }>(
+      `/comments/${encodeURIComponent(commentId)}/replies`,
+      { body, idempotencyKey },
+    ),
+  deleteComment: (commentId) =>
+    del<{ commentId: string; displayState: string; cascadedReplyCount: number; visibleCommentCount: number }>(
+      `/comments/${encodeURIComponent(commentId)}`,
+    ),
+  favoriteWork: (workId) =>
+    put<{ workId: string; favorited: true }>(`/works/${encodeURIComponent(workId)}/favorite`, {}),
+  unfavoriteWork: (workId) =>
+    del<{ workId: string; favorited: false }>(`/works/${encodeURIComponent(workId)}/favorite`),
+  myFavorites: (cursor) => get<Paged<Work>>(`/me/favorites${pageQuery(cursor)}`),
+  reportBehaviorEvents: (events: BehaviorEventInput[]) =>
+    post<{ results: BehaviorEventResult[] }>('/behavior-events/batch', { events }),
+  submitExplicitFeedback: (input: ExplicitFeedbackInput) =>
+    post<ExplicitFeedbackResult>('/me/explicit-feedback', input),
+  adaptationProfile: () => get<AdaptationProfile>('/me/adaptation-profile'),
+  clearAdaptationProfile: (scope: BehaviorPurpose) =>
+    del<AdaptationProfile>(`/me/adaptation-profile?scope=${encodeURIComponent(scope)}`),
+  setRecommendationMode: (mode: AdaptationProfile['recommendationMode']) =>
+    put<AdaptationProfile>('/me/recommendation-mode', { mode }),
 }

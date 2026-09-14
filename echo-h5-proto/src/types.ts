@@ -398,6 +398,16 @@ export interface Paged<T> {
   nextCursor: string | null
 }
 
+/** 用户级投稿名额。权威在服务端，前端不得按本地列表推算。 */
+export type SubmissionNextAction = 'open_work' | 'edit' | 'resubmit' | 'wait' | 'none'
+
+export interface SubmissionCapability {
+  canSubmitWork: boolean
+  blockingWorkId: string | null
+  blockingStatus: string | null
+  nextAction: SubmissionNextAction
+}
+
 /** 搜索·用户结果行（GET /search users item；结构与 demo 用户一致：头像 + 昵称 + 一句签名） */
 export interface SearchUser {
   id: string
@@ -679,6 +689,8 @@ export interface Work {
   aiGenerated: boolean
   /** 是否由回忆卡发布而来 */
   fromCard: boolean
+  /** 列表与详情都下发。陌生人看不到 sourceCardId */
+  sourceType?: 'memory_card' | 'user_upload'
   /** 以下三项只在作者本人视角下发 */
   status?: WorkStatus
   visibility?: Visibility
@@ -686,6 +698,60 @@ export interface Work {
   /** 仅详情 */
   body?: string
   createdAt?: number
+  /** 作者视角：当前草稿版本与下一步动作 */
+  contentVersion?: number
+  nextAction?: SubmissionNextAction
+  reviewMode?: ReviewMode
+  /** 仅绑定后的本人视角：我收藏了没有。公开 DTO 没有收藏数 */
+  favorited?: boolean
+}
+
+export interface WorkCommentAuthor {
+  accountId: string
+  nickname: string
+}
+
+export interface WorkCommentCapabilities {
+  canReply: boolean
+  canDelete: boolean
+  canHide: boolean
+  canReport: boolean
+  canExpandReplies: boolean
+  canRestore?: boolean
+}
+
+export interface WorkComment {
+  commentId: string
+  workId: string
+  rootCommentId: string | null
+  replyToCommentId: string | null
+  authorPublic: WorkCommentAuthor
+  body: string
+  createdAt: number
+  displayState: 'visible' | 'hidden' | 'owner_hidden'
+  stateVersion: number
+  replyToLabel?: string
+  capabilities: WorkCommentCapabilities
+}
+
+export interface WorkCommentThread {
+  comment: WorkComment
+  previewReplies: WorkComment[]
+  visibleReplyCount: number
+  remainingReplyCount: number
+  repliesCursor: string | null
+  capabilities: WorkCommentCapabilities
+}
+
+export interface WorkCommentsPage {
+  sort: 'hot' | 'latest'
+  visibleCommentCount: number
+  items: WorkCommentThread[]
+  nextCursor: string | null
+}
+
+export interface AuthorWorksPage extends Paged<Work> {
+  submissionCapability?: SubmissionCapability
 }
 
 export type WorkMediaType = 'image' | 'video'
@@ -720,7 +786,97 @@ export interface PublishWorkInput {
   visibility?: Visibility
   /** 从回忆卡发布时带上 */
   sourceCardId?: string
+  reviewEvidenceId?: string
   aiGenerated?: boolean
+}
+
+export type ReviewMode = 'reused' | 'full' | 'none'
+
+export interface PublishWorkResult {
+  work: Work
+  message: string
+  workId?: string
+  status?: WorkStatus
+  reviewMode?: ReviewMode
+  reasonCode?: string | null
+  contentVersion?: number
+  nextAction?: SubmissionNextAction
+}
+
+/** 驳回后保存草稿。主状态仍是 rejected。 */
+export interface DraftWorkInput {
+  mediaType?: WorkMediaType
+  mediaKey?: string
+  posterKey?: string
+  durationMs?: number
+  width?: number
+  height?: number
+  title?: string
+  body?: string
+  visibility?: Visibility
+  aiGenerated?: boolean
+}
+
+export interface ResubmitWorkResult {
+  workId: string
+  contentVersion: number
+  contentHash: string
+  status: WorkStatus
+  moderationId: string
+}
+
+export type BehaviorPurpose = 'ui_adaptation' | 'public_recommendation' | 'private_generation'
+
+export interface BehaviorEventInput {
+  idempotencyKey: string
+  eventName: string
+  sessionId: string
+  surface: 'private_onboarding' | 'first_generation' | 'plaza' | 'work_detail'
+  targetType: string
+  targetId?: string
+  activeDurationMs?: number
+  foregroundDurationMs?: number
+  loadWaitMs?: number
+  attemptCount?: number
+  backtrackCount?: number
+  context?: Record<string, unknown>
+  occurredAt: string
+  schemaVersion: 1
+  purposeCode: BehaviorPurpose
+}
+
+export interface BehaviorEventResult {
+  idempotencyKey: string | null
+  status: 'accepted' | 'duplicate' | 'rejected'
+  eventId: string | null
+  reasonCode: string | null
+}
+
+export interface ExplicitFeedbackInput {
+  scope: BehaviorPurpose
+  targetType: 'generation_result' | 'work'
+  targetId: string
+  questionCode: 'likeness' | 'ease' | 'continue_intent' | 'change_request' | 'less_like_this'
+  answerCode: string
+  answerVersion: 1
+  sourceSurface: 'private_onboarding' | 'first_generation' | 'plaza' | 'work_detail'
+}
+
+export interface ExplicitFeedbackResult {
+  feedbackId: string
+  status: 'active' | 'superseded'
+  supersedesId: string | null
+}
+
+export interface AdaptationDomain {
+  enabled: boolean
+}
+
+export interface AdaptationProfile {
+  recommendationMode: 'personalized' | 'non_personalized'
+  uiAdaptation: AdaptationDomain
+  publicRecommendation: AdaptationDomain
+  privateGeneration: AdaptationDomain
 }
 
 export const WORK_STATUS_LABELS: Record<WorkStatus, string> = {

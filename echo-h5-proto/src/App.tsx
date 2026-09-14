@@ -16,11 +16,18 @@ import SearchScreen from './components/SearchScreen'
 import UserProfileScreen from './components/UserProfileScreen'
 import PublishScreen from './components/PublishScreen'
 import WorksFeedScreen from './components/WorksFeedScreen'
-import type { FeedOpenContext } from './components/PlazaScreen'
+import WorkDetailScreen from './components/WorkDetailScreen'
+import FavoritesScreen from './components/FavoritesScreen'
+import {
+  REUSE_DEMO_BODY,
+  REUSE_DEMO_CARD,
+  REUSE_DEMO_EVIDENCE,
+  REUSE_DEMO_MEDIA,
+  REUSE_DEMO_TITLE,
+} from './api/worksMock'
 import { api, bootstrap, hasUnread, IS_MOCK, loadInbox, track } from './api'
 import {
   EMPTY_FEED,
-  appendPage,
   hasNext,
   hasPrev,
   indexOf,
@@ -33,7 +40,7 @@ import {
 } from './api/feedLogic'
 import { myWindowPetId } from './lib/myWindow'
 import { useRelations } from './hooks/useRelations'
-import type { Me, Message, MyPet, PlazaCard, Window } from './types'
+import type { Me, Message, MyPet, Window, Work } from './types'
 import './styles/app.css'
 
 type Phase = 'loading' | 'onboarding' | 'app'
@@ -73,7 +80,12 @@ export default function App() {
   // —— 作品域（t_work）——
   // publishOpen 为浮层；worksOpen 是「我的作品」页，也走浮层（底签已满五个，不再加）
   const [publishOpen, setPublishOpen] = useState(false)
+  const [reviseWork, setReviseWork] = useState<Work | null>(null)
+  const reuseDemo = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('fromCard') === REUSE_DEMO_CARD
   const [worksOpen, setWorksOpen] = useState(false)
+  const [favoritesOpen, setFavoritesOpen] = useState(false)
+  const [openWorkId, setOpenWorkId] = useState<string | null>(null)
   const [plazaCategory, setPlazaCategory] = useState<NonNullable<Window['category']> | null>(null)
 
   // —— 进窗后连续下翻的「流上下文」（定案 D21 / 验收 TC-13）——
@@ -122,11 +134,7 @@ export default function App() {
     feedPullingRef.current = true
     setFeedLoading(true)
     try {
-      const page = await api.plaza(cur.nextCursor)
-      const next = appendPage(feedRef.current, page)
-      applyFeed(next)
-      track('window_feed_page', { size: page.items.length })
-      return next
+      return feedRef.current
     } catch {
       return feedRef.current
     } finally {
@@ -220,6 +228,10 @@ export default function App() {
       alive = false
     }
   }, [refreshPet])
+
+  useEffect(() => {
+    if (reuseDemo) setPublishOpen(true)
+  }, [reuseDemo])
 
   const friend = relations.getById(friendId)
   const reelFriend = relations.getById(reelId)
@@ -318,8 +330,46 @@ export default function App() {
   // —— 全屏浮层（优先级从高到低） ——
   const renderOverlay = () => {
     // 🔴 发布页排在最前：它可能从「我的作品」页里点开，排在后面会被那一屏盖住
-    if (publishOpen) {
-      return <PublishScreen onClose={() => setPublishOpen(false)} />
+    if (publishOpen || reviseWork) {
+      return (
+        <PublishScreen
+          reviseWork={reviseWork ?? undefined}
+          sourceCardId={reuseDemo ? REUSE_DEMO_CARD : undefined}
+          reviewEvidenceId={reuseDemo ? REUSE_DEMO_EVIDENCE : undefined}
+          initialTitle={reuseDemo ? REUSE_DEMO_TITLE : undefined}
+          initialBody={reuseDemo ? REUSE_DEMO_BODY : undefined}
+          initialMedia={reuseDemo ? {
+            resourceId: REUSE_DEMO_MEDIA,
+            url: REUSE_DEMO_MEDIA,
+            mediaType: 'image',
+            width: 900,
+            height: 1350,
+            durationMs: 0,
+          } : undefined}
+          onClose={() => {
+            setPublishOpen(false)
+            setReviseWork(null)
+          }}
+        />
+      )
+    }
+    if (openWorkId) {
+      return (
+        <WorkDetailScreen
+          workId={openWorkId}
+          guest={Boolean(me?.isGuest)}
+          onBack={() => setOpenWorkId(null)}
+          onIdentityChanged={() => { void refreshMe() }}
+        />
+      )
+    }
+    if (favoritesOpen) {
+      return (
+        <FavoritesScreen
+          onBack={() => setFavoritesOpen(false)}
+          onOpenWork={(id) => setOpenWorkId(id)}
+        />
+      )
     }
     if (worksOpen) {
       return (
@@ -329,6 +379,8 @@ export default function App() {
           title="我的作品"
           onBack={() => setWorksOpen(false)}
           onOpenPublish={() => setPublishOpen(true)}
+          onReviseWork={(work) => setReviseWork(work)}
+          onOpenWork={(work) => setOpenWorkId(work.id)}
         />
       )
     }
@@ -418,19 +470,9 @@ export default function App() {
       case 'home':
         return (
           <PlazaScreen
-            onOpen={(w: PlazaCard, ctx: FeedOpenContext) =>
-              openWindow(
-                { id: w.id, petId: w.petId },
-                {
-                  cards: ctx.cards,
-                  nextCursor: ctx.nextCursor,
-                  category: plazaCategory,
-                },
-              )
-            }
+            onOpen={(work) => setOpenWorkId(work.id)}
             onOpenSearch={() => setSearchOpen(true)}
-            category={plazaCategory}
-            onClearCategory={() => setPlazaCategory(null)}
+            guest={Boolean(me?.isGuest)}
           />
         )
       case 'mine':
@@ -473,6 +515,7 @@ export default function App() {
             pet={pet}
             onOpenSpectrum={() => setSpectrumOpen(true)}
             onOpenWorks={() => setWorksOpen(true)}
+            onOpenFavorites={() => setFavoritesOpen(true)}
             onRefresh={async () => {
               await refreshMe()
               await refreshPet()

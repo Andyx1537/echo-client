@@ -112,32 +112,37 @@ describe('http 广场游标续拉（TC-13 同一条流）', () => {
     expect(url).toMatch(/\/plaza$/)
   })
 
-  it('plaza() 按 CardView 契约读取卡片，不要求窗口展示字段', async () => {
+  it('plaza() 按作品列表读取，不带私域卡入口', async () => {
     mockFetchOnce({
       items: [{
-        id: 'card-1',
-        petId: 'pet-1',
-        title: '',
+        id: 'wk-1',
+        authorId: 'acc-1',
+        mediaType: 'image',
+        mediaUrl: '/a.jpg',
+        posterUrl: '',
+        durationMs: 0,
+        width: 900,
+        height: 1200,
+        title: '公开的',
         excerpt: '正文首句。',
-        cover: '',
-        hasCover: false,
-        sourceType: 'record',
         topicIds: [],
         publishedAt: 100,
+        aiGenerated: false,
+        fromCard: false,
+        sourceType: 'user_upload',
       }],
       nextCursor: null,
     })
     const res = await httpBackend.plaza()
     expect(res.items[0]).toMatchObject({
-      id: 'card-1',
-      petId: 'pet-1',
+      id: 'wk-1',
       excerpt: '正文首句。',
-      hasCover: false,
-      sourceType: 'record',
+      sourceType: 'user_upload',
+      aiGenerated: false,
     })
-    expect(res.items[0]).not.toHaveProperty('recent')
-    expect(res.items[0]).not.toHaveProperty('warmthLevel')
-    expect(res.items[0]).not.toHaveProperty('ownerName')
+    expect(res.items[0]).not.toHaveProperty('sourceCardId')
+    expect(res.items[0]).not.toHaveProperty('petId')
+    expect(res.items[0]).not.toHaveProperty('status')
   })
 })
 
@@ -215,5 +220,64 @@ describe('http 光谱语义 → 视觉映射', () => {
     // VM 不含后端语义字段
     expect(n).not.toHaveProperty('intensity')
     expect(res.shadows[0]).toHaveProperty('size')
+  })
+})
+
+describe('http 驳回重提', () => {
+  it('saveWorkDraft / resubmitWork 走同一条 workId，不另造作品', async () => {
+    const draftFn = mockFetchOnce({
+      work: { id: 'wk-1', status: 'rejected', contentVersion: 2, nextAction: 'resubmit' },
+      contentVersion: 2,
+      status: 'rejected',
+    })
+    const draft = await httpBackend.saveWorkDraft('wk-1', { title: '改过' })
+    expect(draftFn.mock.calls[0][0]).toContain('/works/wk-1/draft')
+    expect(draft.contentVersion).toBe(2)
+    expect(draft.work.status).toBe('rejected')
+
+    const resubmitFn = mockFetchOnce({
+      workId: 'wk-1',
+      contentVersion: 2,
+      contentHash: 'abc',
+      status: 'pending',
+      moderationId: 'mod-1',
+    })
+    const resubmit = await httpBackend.resubmitWork('wk-1', { contentVersion: 2, idempotencyKey: 'k1' })
+    expect(resubmitFn.mock.calls[0][0]).toContain('/works/wk-1/resubmit')
+    expect(resubmit.workId).toBe('wk-1')
+    expect(resubmit.status).toBe('pending')
+  })
+})
+
+describe('http 作品投稿名额', () => {
+  it('userWorks() 原样读 submissionCapability，不从 items 推算', async () => {
+    mockFetchOnce({
+      items: [{ id: 'wk-pending', status: 'pending' }],
+      nextCursor: null,
+      submissionCapability: {
+        canSubmitWork: true,
+        blockingWorkId: null,
+        blockingStatus: null,
+        nextAction: 'none',
+      },
+    })
+    const res = await httpBackend.userWorks('acc_me')
+    expect(res.items[0].status).toBe('pending')
+    expect(res.submissionCapability).toEqual({
+      canSubmitWork: true,
+      blockingWorkId: null,
+      blockingStatus: null,
+      nextAction: 'none',
+    })
+  })
+
+  it('userWorks() 缺 capability 时不补算', async () => {
+    mockFetchOnce({
+      items: [{ id: 'wk-pending', status: 'pending' }],
+      nextCursor: null,
+    })
+    const res = await httpBackend.userWorks('acc_me')
+    expect(res.submissionCapability).toBeUndefined()
+    expect(res.items).toHaveLength(1)
   })
 })
