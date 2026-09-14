@@ -44,7 +44,7 @@ export interface DeviceSessionResult {
   phoneBound: false
   sessionToken: string
   deviceCredential: string
-  deviceCredentialAction: 'restored' | 'issued' | 'rotated_after_bind'
+  deviceCredentialAction: 'restored' | 'issued' | 'rotated_after_bind' | 'recovered'
 }
 
 export interface AuthErrorData {
@@ -68,6 +68,7 @@ export interface AuthApi {
   createPhoneChallenge(phone: string, continuation: Continuation, idempotencyKey: string): Promise<PhoneChallenge>
   verifyPhoneChallenge(challengeId: string, code: string, idempotencyKey: string): Promise<PhoneResolution>
   confirmPhoneResolution(resolutionToken: string, idempotencyKey: string): Promise<PhoneResolutionResult>
+  recoverAnonymousSession(recoveryCredential: string, idempotencyKey: string): Promise<DeviceSessionResult>
 }
 
 interface Envelope<T> {
@@ -113,6 +114,8 @@ export const httpAuthApi: AuthApi = {
     request(`/auth/phone/challenges/${encodeURIComponent(challengeId)}/verify`, { code }, key, true),
   confirmPhoneResolution: (token, key) =>
     request(`/auth/phone/resolutions/${encodeURIComponent(token)}/confirm`, {}, key, true),
+  recoverAnonymousSession: (recoveryCredential, key) =>
+    request('/auth/account/recovery/session', { recoveryCredential }, key, false),
 }
 
 export function normalizeMobilePhone(value: string): string | null {
@@ -129,7 +132,7 @@ export function applyDeviceSession(result: DeviceSessionResult): Session {
   return session
 }
 
-export function applyPhoneResolution(result: PhoneResolutionResult): Session {
+export function applyPhoneResolution(result: PhoneResolutionResult, reservedOnboardingId?: string): Session {
   const validNextActions: PhoneNextAction[] = [
     'none',
     'resume_private_onboarding',
@@ -154,7 +157,7 @@ export function applyPhoneResolution(result: PhoneResolutionResult): Session {
   if (result.previousAnonymousCredentialDisposition === 'revoked') {
     setActiveDeviceCredential(null)
   } else {
-    retainAnonymousRecoveryCredential(recoveryCredential!)
+    retainAnonymousRecoveryCredential(recoveryCredential!, reservedOnboardingId)
     setActiveDeviceCredential(null)
   }
   const session: Session = { token: result.sessionToken, accountId: result.accountId, isGuest: false, hasPet: false }

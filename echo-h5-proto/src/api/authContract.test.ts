@@ -8,9 +8,11 @@ import {
 } from './authContract'
 import {
   clearBootstrapOperation,
+  consumeAnonymousRecoveryCredential,
   getActiveDeviceCredential,
   getAnonymousRecoveryCredentials,
   getOrCreateBootstrapOperation,
+  retainAnonymousRecoveryCredential,
   setActiveDeviceCredential,
 } from './authCredentialStore'
 import { clearSession, getSession, setSession } from './session'
@@ -95,10 +97,13 @@ describe('phone-account-resolution-v1 frontend boundary', () => {
       returnToAllowed: false, nextAction: 'restart_in_existing_account',
       previousAnonymousCredentialDisposition: 'retained_as_recovery',
       anonymousRecovery: { recoveryCredential: 'recovery-1' },
-    })
+    }, 'onboarding-reserved')
     expect(getActiveDeviceCredential()).toBeNull()
     expect(getAnonymousRecoveryCredentials()).toEqual(['recovery-1'])
     expect(getSession()).toMatchObject({ accountId: 'phone-account', token: 'phone-token', isGuest: false })
+    expect(consumeAnonymousRecoveryCredential('recovery-1')).toBe('onboarding-reserved')
+    expect(localStorage.getItem('echo.private-onboarding.active.v1')).toBe('onboarding-reserved')
+    expect(getAnonymousRecoveryCredentials()).toEqual([])
   })
 
   it('rejects an incomplete switch response before changing anonymous credentials or session', () => {
@@ -133,6 +138,25 @@ describe('phone-account-resolution-v1 frontend boundary', () => {
       phone: '+8613800000000', purpose: 'login_or_bind',
       continuation: { intent: 'private_onboarding_generation', resourceId: 'onboarding-1', schemaVersion: 'v1' },
     })
+  })
+
+  it('recovers the reserved anonymous session without sending accountId', async () => {
+    retainAnonymousRecoveryCredential('recovery-1')
+    const fetchMock = vi.fn().mockResolvedValue(response({
+      accountId: 'anon-old', phoneBound: false, sessionToken: 'woken-token',
+      deviceCredential: 'device-woken', deviceCredentialAction: 'recovered',
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const result = await httpAuthApi.recoverAnonymousSession('recovery-1', 'wake-key')
+    applyDeviceSession(result)
+    consumeAnonymousRecoveryCredential('recovery-1')
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(new Headers(init.headers).get('Idempotency-Key')).toBe('wake-key')
+    expect(new Headers(init.headers).has('Authorization')).toBe(false)
+    expect(JSON.parse(init.body as string)).toEqual({ recoveryCredential: 'recovery-1' })
+    expect(getSession()).toMatchObject({ accountId: 'anon-old', token: 'woken-token', isGuest: true })
+    expect(getActiveDeviceCredential()).toBe('device-woken')
+    expect(getAnonymousRecoveryCredentials()).toEqual([])
   })
 
   it('refreshes /me projection before continuing after a phone account switch', async () => {
