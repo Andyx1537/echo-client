@@ -34,6 +34,8 @@ import type {
   WorkCommentsPage,
   BehaviorEventInput,
   BehaviorEventResult,
+  ExplicitFeedbackInput,
+  ExplicitFeedbackResult,
   MuteDuration,
 } from '../types'
 import {
@@ -333,4 +335,6 @@ export const httpBackend: EchoBackend = {
   myFavorites: (cursor) => get<Paged<Work>>(`/me/favorites${pageQuery(cursor)}`),
   reportBehaviorEvents: (events: BehaviorEventInput[]) =>
     post<{ results: BehaviorEventResult[] }>('/behavior-events/batch', { events }),
+  submitExplicitFeedback: (input: ExplicitFeedbackInput) =>
+    post<ExplicitFeedbackResult>('/me/explicit-feedback', input),
 }

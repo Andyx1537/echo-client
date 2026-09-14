@@ -36,6 +36,8 @@ import type {
   WorkCommentsPage,
   BehaviorEventInput,
   BehaviorEventResult,
+  ExplicitFeedbackInput,
+  ExplicitFeedbackResult,
   MuteDuration,
   SpectrumNodeView,
   ShadowAreaView,
@@ -300,6 +302,7 @@ export interface EchoBackend {
   unfavoriteWork(workId: string): Promise<{ workId: string; favorited: false }>
   myFavorites(cursor?: string): Promise<Paged<Work>>
   reportBehaviorEvents(events: BehaviorEventInput[]): Promise<{ results: BehaviorEventResult[] }>
+  submitExplicitFeedback(input: ExplicitFeedbackInput): Promise<ExplicitFeedbackResult>
 }
 
 /**

@@ -62,6 +62,7 @@ import {
   mockReplyComment,
   type SocialMockState,
 } from './workSocialMock'
+import { submitExplicitFeedback as saveExplicitFeedback } from './explicitFeedbackMock'
 import { normalizeQuery, runSearch } from './searchLogic'
 import {
   ApiError,
@@ -1303,6 +1304,9 @@ export const mockBackend: EchoBackend = {
         reasonCode: null,
       })),
     }
+  },
+  async submitExplicitFeedback(input) {
+    return saveExplicitFeedback(load().accountId, input)
   },
 }
 

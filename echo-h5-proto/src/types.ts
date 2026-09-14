@@ -852,6 +852,22 @@ export interface BehaviorEventResult {
   reasonCode: string | null
 }
 
+export interface ExplicitFeedbackInput {
+  scope: BehaviorPurpose
+  targetType: 'generation_result' | 'work'
+  targetId: string
+  questionCode: 'likeness' | 'ease' | 'continue_intent' | 'change_request' | 'less_like_this'
+  answerCode: string
+  answerVersion: 1
+  sourceSurface: 'private_onboarding' | 'first_generation' | 'plaza' | 'work_detail'
+}
+
+export interface ExplicitFeedbackResult {
+  feedbackId: string
+  status: 'active' | 'superseded'
+  supersedesId: string | null
+}
+
 export const WORK_STATUS_LABELS: Record<WorkStatus, string> = {
   draft: '草稿',
   pending: '审核中',
