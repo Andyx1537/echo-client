@@ -7,8 +7,10 @@
 //    瀑布流要判的就是高低错落，样本全挤在同一个比例里，
 //    有没有按真实宽高排版会长得一模一样。
 
-import type { PublishWorkInput, Work } from '../types'
+import type { PublishWorkInput, SubmissionCapability, Work } from '../types'
 import { assetUrl } from '../lib/assetUrl'
+
+const OCCUPYING = new Set(['pending', 'uploading', 'submitting'])
 
 /** 种子作品。覆盖：图片/视频、AI 生成/用户自制、来自回忆卡/自制上传、竖构图/横构图。 */
 const SEED: Array<
@@ -170,4 +172,17 @@ export function mockAuthorWorks(state: WorksMockState, authorId: string, self: b
   return state.works
     .filter((w) => w.authorId === authorId)
     .filter((w) => self || !w.status || w.status === 'public')
+}
+
+export function mockSubmissionCapability(state: WorksMockState, authorId: string): SubmissionCapability {
+  const blocking = state.works.find((work) => work.authorId === authorId && work.status && OCCUPYING.has(work.status))
+  if (!blocking) {
+    return { canSubmitWork: true, blockingWorkId: null, blockingStatus: null, nextAction: 'none' }
+  }
+  return {
+    canSubmitWork: false,
+    blockingWorkId: blocking.id,
+    blockingStatus: blocking.status ?? 'pending',
+    nextAction: 'wait',
+  }
 }

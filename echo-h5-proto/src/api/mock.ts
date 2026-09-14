@@ -12,6 +12,7 @@ import type {
   Message,
   MyPet,
   OnboardingCandidate,
+  AuthorWorksPage,
   Paged,
   Postcard,
   PostcardSkin,
@@ -43,6 +44,7 @@ import {
   mockAuthorWorks,
   mockFeed,
   mockPublish,
+  mockSubmissionCapability,
   type WorksMockState,
 } from './worksMock'
 import { normalizeQuery, runSearch } from './searchLogic'
@@ -1118,6 +1120,10 @@ export const mockBackend: EchoBackend = {
     await delay(240)
     const d = load()
     const state = worksState(d)
+    const occupying = mockSubmissionCapability(state, d.accountId)
+    if (!occupying.canSubmitWork) {
+      throw new ApiError(3002, '还有一条作品正在处理，先等它走完再发新的。', 'submission_slot_occupied')
+    }
     // mock 里 mediaKey 就是 upload 返回的 objectURL 资源 id，直接当地址用
     const work = mockPublish(state, input, d.accountId, input.mediaKey, input.posterKey ?? '')
     d.works = state.works
@@ -1132,11 +1138,15 @@ export const mockBackend: EchoBackend = {
     return slicePage(all, cursor)
   },
 
-  async userWorks(userId, cursor): Promise<Paged<Work>> {
+  async userWorks(userId, cursor): Promise<AuthorWorksPage> {
     await delay(120)
     const d = load()
-    const all = mockAuthorWorks(worksState(d), userId, userId === d.accountId)
-    return slicePage(all, cursor)
+    const state = worksState(d)
+    const all = mockAuthorWorks(state, userId, userId === d.accountId)
+    return {
+      ...slicePage(all, cursor),
+      ...(userId === d.accountId ? { submissionCapability: mockSubmissionCapability(state, userId) } : {}),
+    }
   },
 
   async workDetail(workId): Promise<{ work: Work }> {

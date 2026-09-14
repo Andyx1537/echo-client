@@ -15,6 +15,7 @@ import type {
   PendingMessage,
   PlazaCard,
   OnboardingCandidate,
+  AuthorWorksPage,
   Paged,
   Postcard,
   PostcardSkin,
@@ -279,7 +280,7 @@ export interface EchoBackend {
   /** 作品瀑布 */
   works(cursor?: string): Promise<Paged<Work>>
   /** 个人作品页。自己看自己时会带上 status/visibility */
-  userWorks(userId: string, cursor?: string): Promise<Paged<Work>>
+  userWorks(userId: string, cursor?: string): Promise<AuthorWorksPage>
   workDetail(workId: string): Promise<{ work: Work }>
   deleteWork(workId: string): Promise<{ ok: boolean }>
 }

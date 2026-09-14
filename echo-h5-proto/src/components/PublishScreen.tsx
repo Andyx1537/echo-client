@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
-import type { PublishWorkInput, Visibility, Work, WorkMediaType } from '../types'
+import type { PublishWorkInput, SubmissionCapability, Visibility, Work, WorkMediaType } from '../types'
 import { VISIBILITY_LABELS } from '../types'
+import { canSubmitWork, submissionWaitCopy } from '../lib/workSubmission'
+import { getSession } from '../api/session'
 import AiGeneratedBadge from './AiGeneratedBadge'
 
 /**
@@ -50,11 +52,21 @@ export default function PublishScreen({
   const [visibility, setVisibility] = useState<Visibility>('public')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [capability, setCapability] = useState<SubmissionCapability | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const allowPublish = canSubmitWork(capability)
+  const waitCopy = submissionWaitCopy(capability)
+
+  useEffect(() => {
+    const accountId = getSession()?.accountId
+    if (!accountId) return
+    void api.userWorks(accountId).then((page) => setCapability(page.submissionCapability ?? null))
+  }, [])
 
   const fromCard = Boolean(sourceCardId)
 
   async function onPick(files: FileList | null) {
+    if (!allowPublish) return
     const f = files?.[0]
     if (!f) return
     setErr(null)
@@ -75,7 +87,7 @@ export default function PublishScreen({
   }
 
   async function submit() {
-    if (!picked) return
+    if (!picked || !allowPublish) return
     setErr(null)
     setBusy(true)
     try {
@@ -116,10 +128,11 @@ export default function PublishScreen({
 
       {phase === 'pick' && (
         <div className="pub-pick">
+          {waitCopy && <p className="pub-hint">{waitCopy}</p>}
           <button
             className="pub-dropzone"
             onClick={() => fileRef.current?.click()}
-            disabled={busy}
+            disabled={busy || !allowPublish}
           >
             <span className="pub-dz-glyph" aria-hidden>
               ＋
@@ -213,7 +226,8 @@ export default function PublishScreen({
             用 sticky 时它会压住「谁能看见」那一栏——实测第一版就是这样，
             那一栏的标题被切掉半行，看起来像渲染坏了。 */}
         <div className="pub-actions">
-          <button className="pub-submit" onClick={submit} disabled={busy}>
+          {waitCopy && <p className="pub-err">{waitCopy}</p>}
+          <button className="pub-submit" onClick={submit} disabled={busy || !allowPublish}>
             {busy ? '正在提交…' : '发布'}
           </button>
           {/* 🔴 这句不能省：不说清楚会先进审核，作者提交后会立刻去广场找它 */}

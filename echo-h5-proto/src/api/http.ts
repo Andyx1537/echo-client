@@ -11,6 +11,7 @@ import type {
   Message,
   MyPet,
   OnboardingCandidate,
+  AuthorWorksPage,
   Paged,
   PendingMessage,
   PlazaCard,
@@ -285,7 +286,7 @@ export const httpBackend: EchoBackend = {
   publishWork: (input) => post<{ work: Work; message: string }>('/works', input),
   works: (cursor) => get<Paged<Work>>(`/works${pageQuery(cursor)}`),
   userWorks: (userId, cursor) =>
-    get<Paged<Work>>(`/users/${encodeURIComponent(userId)}/works${pageQuery(cursor)}`),
+    get<AuthorWorksPage>(`/users/${encodeURIComponent(userId)}/works${pageQuery(cursor)}`),
   workDetail: (workId) => get<{ work: Work }>(`/works/${encodeURIComponent(workId)}`),
   deleteWork: (workId) => del<{ ok: boolean }>(`/works/${encodeURIComponent(workId)}`),
 }

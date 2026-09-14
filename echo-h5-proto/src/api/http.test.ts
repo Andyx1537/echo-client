@@ -217,3 +217,36 @@ describe('http 光谱语义 → 视觉映射', () => {
     expect(res.shadows[0]).toHaveProperty('size')
   })
 })
+
+describe('http 作品投稿名额', () => {
+  it('userWorks() 原样读 submissionCapability，不从 items 推算', async () => {
+    mockFetchOnce({
+      items: [{ id: 'wk-pending', status: 'pending' }],
+      nextCursor: null,
+      submissionCapability: {
+        canSubmitWork: true,
+        blockingWorkId: null,
+        blockingStatus: null,
+        nextAction: 'none',
+      },
+    })
+    const res = await httpBackend.userWorks('acc_me')
+    expect(res.items[0].status).toBe('pending')
+    expect(res.submissionCapability).toEqual({
+      canSubmitWork: true,
+      blockingWorkId: null,
+      blockingStatus: null,
+      nextAction: 'none',
+    })
+  })
+
+  it('userWorks() 缺 capability 时不补算', async () => {
+    mockFetchOnce({
+      items: [{ id: 'wk-pending', status: 'pending' }],
+      nextCursor: null,
+    })
+    const res = await httpBackend.userWorks('acc_me')
+    expect(res.submissionCapability).toBeUndefined()
+    expect(res.items).toHaveLength(1)
+  })
+})

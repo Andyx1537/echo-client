@@ -398,6 +398,16 @@ export interface Paged<T> {
   nextCursor: string | null
 }
 
+/** 用户级投稿名额。权威在服务端，前端不得按本地列表推算。 */
+export type SubmissionNextAction = 'open_work' | 'edit' | 'resubmit' | 'wait' | 'none'
+
+export interface SubmissionCapability {
+  canSubmitWork: boolean
+  blockingWorkId: string | null
+  blockingStatus: string | null
+  nextAction: SubmissionNextAction
+}
+
 /** 搜索·用户结果行（GET /search users item；结构与 demo 用户一致：头像 + 昵称 + 一句签名） */
 export interface SearchUser {
   id: string
@@ -686,6 +696,10 @@ export interface Work {
   /** 仅详情 */
   body?: string
   createdAt?: number
+}
+
+export interface AuthorWorksPage extends Paged<Work> {
+  submissionCapability?: SubmissionCapability
 }
 
 export type WorkMediaType = 'image' | 'video'

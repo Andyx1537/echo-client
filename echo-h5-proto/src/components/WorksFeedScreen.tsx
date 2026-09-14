@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import type React from 'react'
 import { api } from '../api'
-import type { Work } from '../types'
+import type { SubmissionCapability, Work } from '../types'
 import { WORK_STATUS_LABELS } from '../types'
+import { canSubmitWork, submissionWaitCopy } from '../lib/workSubmission'
 import AiGeneratedBadge from './AiGeneratedBadge'
 
 /**
@@ -36,18 +37,22 @@ export default function WorksFeedScreen({
   const [scope, setScope] = useState<'feed' | 'mine'>(self ? 'mine' : 'feed')
   const [items, setItems] = useState<Work[] | null>(null)
   const [cursor, setCursor] = useState<string | null>(null)
+  const [capability, setCapability] = useState<SubmissionCapability | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
-
   const mine = scope === 'mine' && Boolean(authorId)
+  const allowPublish = canSubmitWork(capability)
+  const waitCopy = mine ? submissionWaitCopy(capability) : null
 
   useEffect(() => {
     let alive = true
     setItems(null)
+    if (mine) setCapability(null)
     const load = mine ? api.userWorks(authorId as string) : api.works()
     load.then((p) => {
       if (!alive) return
       setItems(p.items)
       setCursor(p.nextCursor)
+      if (mine) setCapability(p.submissionCapability ?? null)
     })
     return () => {
       alive = false
@@ -100,7 +105,8 @@ export default function WorksFeedScreen({
           <p className="works-empty-sub">
             {mine ? '把一张照片、一段视频放上来，让它被看见。' : '过一会儿再来看看吧。'}
           </p>
-          {mine && onOpenPublish && (
+          {mine && waitCopy && <p className="works-empty-sub">{waitCopy}</p>}
+          {mine && allowPublish && onOpenPublish && (
             <button className="pub-submit" onClick={onOpenPublish}>
               发一个
             </button>
@@ -123,13 +129,14 @@ export default function WorksFeedScreen({
   return (
     <div className="works">
       <Head title={title} onBack={onBack}>
-        {self && onOpenPublish && (
+        {self && allowPublish && onOpenPublish && (
           <button className="works-new" onClick={onOpenPublish}>
             ＋ 发布
           </button>
         )}
       </Head>
       {scopeTabs}
+      {mine && waitCopy && <p className="works-empty-sub" style={{ padding: '0 18px 8px' }}>{waitCopy}</p>}
       <div className="works-grid">
         {cols.map((col, ci) => (
           <div className="works-col" key={ci}>
