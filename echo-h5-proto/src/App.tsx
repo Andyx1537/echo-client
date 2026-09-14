@@ -17,6 +17,7 @@ import UserProfileScreen from './components/UserProfileScreen'
 import PublishScreen from './components/PublishScreen'
 import WorksFeedScreen from './components/WorksFeedScreen'
 import WorkDetailScreen from './components/WorkDetailScreen'
+import FavoritesScreen from './components/FavoritesScreen'
 import {
   REUSE_DEMO_BODY,
   REUSE_DEMO_CARD,
@@ -83,6 +84,7 @@ export default function App() {
   const reuseDemo = typeof window !== 'undefined'
     && new URLSearchParams(window.location.search).get('fromCard') === REUSE_DEMO_CARD
   const [worksOpen, setWorksOpen] = useState(false)
+  const [favoritesOpen, setFavoritesOpen] = useState(false)
   const [openWorkId, setOpenWorkId] = useState<string | null>(null)
   const [plazaCategory, setPlazaCategory] = useState<NonNullable<Window['category']> | null>(null)
 
@@ -355,7 +357,17 @@ export default function App() {
       return (
         <WorkDetailScreen
           workId={openWorkId}
+          guest={Boolean(me?.isGuest)}
           onBack={() => setOpenWorkId(null)}
+          onIdentityChanged={() => { void refreshMe() }}
+        />
+      )
+    }
+    if (favoritesOpen) {
+      return (
+        <FavoritesScreen
+          onBack={() => setFavoritesOpen(false)}
+          onOpenWork={(id) => setOpenWorkId(id)}
         />
       )
     }
@@ -503,6 +515,7 @@ export default function App() {
             pet={pet}
             onOpenSpectrum={() => setSpectrumOpen(true)}
             onOpenWorks={() => setWorksOpen(true)}
+            onOpenFavorites={() => setFavoritesOpen(true)}
             onRefresh={async () => {
               await refreshMe()
               await refreshPet()

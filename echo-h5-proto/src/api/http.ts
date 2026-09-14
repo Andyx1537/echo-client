@@ -30,6 +30,8 @@ import type {
   DraftWorkInput,
   PublishWorkResult,
   ResubmitWorkResult,
+  WorkComment,
+  WorkCommentsPage,
   MuteDuration,
 } from '../types'
 import {
@@ -304,4 +306,27 @@ export const httpBackend: EchoBackend = {
   resubmitWork: (workId, input) =>
     post<ResubmitWorkResult>(`/works/${encodeURIComponent(workId)}/resubmit`, input),
   deleteWork: (workId) => del<{ ok: boolean }>(`/works/${encodeURIComponent(workId)}`),
+  workComments: (workId, cursor, sort = 'hot') =>
+    get<WorkCommentsPage>(`/works/${encodeURIComponent(workId)}/comments?sort=${sort}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`),
+  commentReplies: (rootCommentId, cursor) =>
+    get<Paged<WorkComment>>(`/comments/${encodeURIComponent(rootCommentId)}/replies${pageQuery(cursor)}`),
+  postWorkComment: (workId, body, idempotencyKey) =>
+    post<{ comment: WorkComment; visibleCommentCount: number }>(
+      `/works/${encodeURIComponent(workId)}/comments`,
+      { body, idempotencyKey },
+    ),
+  replyToComment: (commentId, body, idempotencyKey) =>
+    post<{ comment: WorkComment; rootCommentId: string; replyToCommentId: string; visibleCommentCount: number }>(
+      `/comments/${encodeURIComponent(commentId)}/replies`,
+      { body, idempotencyKey },
+    ),
+  deleteComment: (commentId) =>
+    del<{ commentId: string; displayState: string; cascadedReplyCount: number; visibleCommentCount: number }>(
+      `/comments/${encodeURIComponent(commentId)}`,
+    ),
+  favoriteWork: (workId) =>
+    put<{ workId: string; favorited: true }>(`/works/${encodeURIComponent(workId)}/favorite`, {}),
+  unfavoriteWork: (workId) =>
+    del<{ workId: string; favorited: false }>(`/works/${encodeURIComponent(workId)}/favorite`),
+  myFavorites: (cursor) => get<Paged<Work>>(`/me/favorites${pageQuery(cursor)}`),
 }

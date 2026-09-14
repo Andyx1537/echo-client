@@ -54,6 +54,14 @@ import {
   type MockReviewEvidence,
   type WorksMockState,
 } from './worksMock'
+import {
+  freshSocial,
+  mockCommentPage,
+  mockDeleteComment,
+  mockPostComment,
+  mockReplyComment,
+  type SocialMockState,
+} from './workSocialMock'
 import { normalizeQuery, runSearch } from './searchLogic'
 import {
   ApiError,
@@ -175,6 +183,8 @@ interface MockDB {
   reviewEvidences?: MockReviewEvidence[]
   /** 匿名共鸣厅批次。绑定后不用。旧缓存可缺省 */
   plazaBatch?: { ids: string[]; startedAt: number }
+  comments?: SocialMockState['comments']
+  favorites?: SocialMockState['favorites']
 }
 
 const AVATAR_POOL = [
@@ -1153,7 +1163,9 @@ export const mockBackend: EchoBackend = {
     if (!self && found.status && found.status !== 'public') {
       throw new ApiError(2004, '这个作品找不到了。')
     }
-    return { work: mockAuthorView(found, self) }
+    const view = mockAuthorView(found, self)
+    if (!d.isGuest) view.favorited = socialState(d).favorites.some((f) => f.accountId === d.accountId && f.workId === workId)
+    return { work: view }
   },
 
   async saveWorkDraft(workId, input: DraftWorkInput): Promise<{ work: Work; contentVersion: number; status: string }> {
@@ -1195,6 +1207,93 @@ export const mockBackend: EchoBackend = {
     save()
     return { ok: true }
   },
+
+  async workComments(workId, cursor, sort = 'hot') {
+    await delay(80)
+    const d = load()
+    return mockCommentPage(socialState(d), workId, d.isGuest, sort, cursor)
+  },
+  async commentReplies(rootCommentId, cursor) {
+    await delay(80)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    const replies = socialState(d).comments
+      .filter((c) => c.rootCommentId === rootCommentId && c.displayState === 'visible')
+      .sort((a, b) => a.createdAt - b.createdAt)
+    const start = Math.max(0, Number(cursor ?? 0) || 0)
+    const items = replies.slice(start, start + 20)
+    return { items, nextCursor: start + items.length < replies.length ? String(start + items.length) : null }
+  },
+  async postWorkComment(workId, body, _key) {
+    await delay(120)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    const comment = mockPostComment(socialState(d), workId, d.accountId, d.nickname, body)
+    d.comments = socialState(d).comments
+    save()
+    return { comment, visibleCommentCount: socialState(d).comments.filter((c) => c.workId === workId && c.displayState === 'visible').length }
+  },
+  async replyToComment(commentId, body, _key) {
+    await delay(120)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    try {
+      const comment = mockReplyComment(socialState(d), commentId, d.accountId, d.nickname, body)
+      d.comments = socialState(d).comments
+      save()
+      return {
+        comment,
+        rootCommentId: comment.rootCommentId ?? comment.commentId,
+        replyToCommentId: comment.replyToCommentId ?? comment.commentId,
+        visibleCommentCount: socialState(d).comments.filter((c) => c.workId === comment.workId && c.displayState === 'visible').length,
+      }
+    } catch (e) {
+      throw toApiError(e)
+    }
+  },
+  async deleteComment(commentId) {
+    await delay(100)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    try {
+      const result = mockDeleteComment(socialState(d), commentId, d.accountId)
+      d.comments = socialState(d).comments
+      save()
+      return result
+    } catch (e) {
+      throw toApiError(e)
+    }
+  },
+  async favoriteWork(workId) {
+    await delay(80)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    const state = socialState(d)
+    if (!state.favorites.some((f) => f.accountId === d.accountId && f.workId === workId)) {
+      state.favorites = [...state.favorites, { accountId: d.accountId, workId, createdAt: Date.now() }]
+    }
+    d.favorites = state.favorites
+    save()
+    return { workId, favorited: true as const }
+  },
+  async unfavoriteWork(workId) {
+    await delay(80)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    const state = socialState(d)
+    state.favorites = state.favorites.filter((f) => !(f.accountId === d.accountId && f.workId === workId))
+    d.favorites = state.favorites
+    save()
+    return { workId, favorited: false as const }
+  },
+  async myFavorites(cursor) {
+    await delay(80)
+    const d = load()
+    if (d.isGuest) throw new ApiError(1002, '先绑定一下手机号吧。', 'phone_binding_required')
+    const ids = new Set(socialState(d).favorites.filter((f) => f.accountId === d.accountId).map((f) => f.workId))
+    const all = mockFeed(worksState(d)).filter((w) => ids.has(w.id))
+    return slicePage(all, cursor)
+  },
 }
 
 function toApiError(error: unknown): ApiError {
@@ -1204,6 +1303,14 @@ function toApiError(error: unknown): ApiError {
 }
 
 /** 旧 localStorage 缓存里没有 works 字段，兜底建一份种子，不为此 bump DB_VERSION。 */
+function socialState(d: MockDB): SocialMockState {
+  const works = worksState(d)
+  const fresh = freshSocial(works.works)
+  if (!d.comments) d.comments = fresh.comments
+  if (!d.favorites) d.favorites = fresh.favorites
+  return { comments: d.comments, favorites: d.favorites }
+}
+
 function worksState(d: MockDB): WorksMockState {
   const fresh = freshWorks(d.accountId)
   if (!d.works) {

@@ -702,6 +702,52 @@ export interface Work {
   contentVersion?: number
   nextAction?: SubmissionNextAction
   reviewMode?: ReviewMode
+  /** 仅绑定后的本人视角：我收藏了没有。公开 DTO 没有收藏数 */
+  favorited?: boolean
+}
+
+export interface WorkCommentAuthor {
+  accountId: string
+  nickname: string
+}
+
+export interface WorkCommentCapabilities {
+  canReply: boolean
+  canDelete: boolean
+  canHide: boolean
+  canReport: boolean
+  canExpandReplies: boolean
+  canRestore?: boolean
+}
+
+export interface WorkComment {
+  commentId: string
+  workId: string
+  rootCommentId: string | null
+  replyToCommentId: string | null
+  authorPublic: WorkCommentAuthor
+  body: string
+  createdAt: number
+  displayState: 'visible' | 'hidden' | 'owner_hidden'
+  stateVersion: number
+  replyToLabel?: string
+  capabilities: WorkCommentCapabilities
+}
+
+export interface WorkCommentThread {
+  comment: WorkComment
+  previewReplies: WorkComment[]
+  visibleReplyCount: number
+  remainingReplyCount: number
+  repliesCursor: string | null
+  capabilities: WorkCommentCapabilities
+}
+
+export interface WorkCommentsPage {
+  sort: 'hot' | 'latest'
+  visibleCommentCount: number
+  items: WorkCommentThread[]
+  nextCursor: string | null
 }
 
 export interface AuthorWorksPage extends Paged<Work> {

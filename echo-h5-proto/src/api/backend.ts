@@ -32,6 +32,8 @@ import type {
   PublishWorkResult,
   DraftWorkInput,
   ResubmitWorkResult,
+  WorkComment,
+  WorkCommentsPage,
   MuteDuration,
   SpectrumNodeView,
   ShadowAreaView,
@@ -287,6 +289,14 @@ export interface EchoBackend {
   saveWorkDraft(workId: string, input: DraftWorkInput): Promise<{ work: Work; contentVersion: number; status: string }>
   resubmitWork(workId: string, input: { contentVersion: number; idempotencyKey: string }): Promise<ResubmitWorkResult>
   deleteWork(workId: string): Promise<{ ok: boolean }>
+  workComments(workId: string, cursor?: string, sort?: 'hot' | 'latest'): Promise<WorkCommentsPage>
+  commentReplies(rootCommentId: string, cursor?: string): Promise<Paged<WorkComment>>
+  postWorkComment(workId: string, body: string, idempotencyKey: string): Promise<{ comment: WorkComment; visibleCommentCount: number }>
+  replyToComment(commentId: string, body: string, idempotencyKey: string): Promise<{ comment: WorkComment; rootCommentId: string; replyToCommentId: string; visibleCommentCount: number }>
+  deleteComment(commentId: string): Promise<{ commentId: string; displayState: string; cascadedReplyCount: number; visibleCommentCount: number }>
+  favoriteWork(workId: string): Promise<{ workId: string; favorited: true }>
+  unfavoriteWork(workId: string): Promise<{ workId: string; favorited: false }>
+  myFavorites(cursor?: string): Promise<Paged<Work>>
 }
 
 /**
