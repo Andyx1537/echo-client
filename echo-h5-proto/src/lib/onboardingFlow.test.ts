@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { OnboardingDetail, OnboardingSnapshot } from '../api/onboardingContract'
-import { ONBOARDING_QUESTIONS, answerCountIsValid, deriveOnboardingView, firstMissingQuestion, recoverableMessage, shouldResumePrivateOnboarding } from './onboardingFlow'
+import { ONBOARDING_QUESTIONS, answerCountIsValid, deriveOnboardingView, firstMissingQuestion, pollGenerationProgress, recoverableMessage, restoreOrRestartOnboarding, shouldResumePrivateOnboarding } from './onboardingFlow'
 
 const snapshot: OnboardingSnapshot = {
   onboardingId: 'ob-1', accountId: 'acc-1', petName: '它', status: 'collecting', currentStep: 'questionnaire',
@@ -65,5 +65,42 @@ describe('onboarding flow', () => {
     expect(shouldResumePrivateOnboarding({
       returnToAllowed: false, nextAction: 'resume_private_onboarding',
     })).toBe(false)
+  })
+
+  it('retries generation progress with GET only after a failed poll', async () => {
+    const generating = {
+      onboardingId: 'ob-1',
+      status: 'generating' as const,
+      generationJob: { jobId: 'job-1', status: 'running' as const, pollAfterMs: 300 },
+    }
+    const get = vi.fn()
+      .mockRejectedValueOnce(new Error('network_unavailable'))
+      .mockResolvedValueOnce(detail({ snapshot: { ...snapshot, status: 'candidate_ready', generationJob: null } }))
+    const generate = vi.fn()
+
+    await expect(pollGenerationProgress(get, generating)).rejects.toThrow('network_unavailable')
+    expect(await pollGenerationProgress(get, generating)).toMatchObject({ snapshot: { status: 'candidate_ready' } })
+    expect(get).toHaveBeenCalledTimes(2)
+    expect(get).toHaveBeenNthCalledWith(1, 'ob-1')
+    expect(get).toHaveBeenNthCalledWith(2, 'ob-1')
+    expect(generate).not.toHaveBeenCalled()
+  })
+
+  it('does not poll when there is no in-flight generation job', async () => {
+    const get = vi.fn()
+    expect(await pollGenerationProgress(get, { onboardingId: 'ob-1', status: 'ready_to_generate', generationJob: null })).toBeNull()
+    expect(get).not.toHaveBeenCalled()
+  })
+
+  it('restarts onboarding after a switch instead of reading the reserved draft', async () => {
+    const resume = vi.fn()
+    const restart = vi.fn().mockResolvedValue(detail({ snapshot: { ...snapshot, onboardingId: 'fresh' }, assets: [], answers: [] }))
+    const result = await restoreOrRestartOnboarding({
+      returnToAllowed: false, nextAction: 'restart_in_existing_account',
+    }, resume, restart)
+    expect(result.resumed).toBe(false)
+    expect(result.detail.snapshot.onboardingId).toBe('fresh')
+    expect(resume).not.toHaveBeenCalled()
+    expect(restart).toHaveBeenCalledOnce()
   })
 })

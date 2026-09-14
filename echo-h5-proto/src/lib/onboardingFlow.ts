@@ -116,3 +116,26 @@ export function shouldResumePrivateOnboarding(
 ): boolean {
   return result.returnToAllowed && result.nextAction === 'resume_private_onboarding'
 }
+
+export function canPollGenerationProgress(snapshot: Pick<OnboardingSnapshot, 'status' | 'generationJob'>): boolean {
+  return Boolean(snapshot.generationJob && (snapshot.status === 'generating' || snapshot.status === 'refining'))
+}
+
+export async function pollGenerationProgress(
+  get: (onboardingId: string) => Promise<OnboardingDetail>,
+  snapshot: Pick<OnboardingSnapshot, 'onboardingId' | 'status' | 'generationJob'>,
+): Promise<OnboardingDetail | null> {
+  if (!canPollGenerationProgress(snapshot)) return null
+  return get(snapshot.onboardingId)
+}
+
+export async function restoreOrRestartOnboarding(
+  result: Pick<PhoneResolutionResult, 'returnToAllowed' | 'nextAction'>,
+  resume: () => Promise<OnboardingDetail>,
+  restart: () => Promise<OnboardingDetail>,
+): Promise<{ detail: OnboardingDetail; resumed: boolean }> {
+  if (shouldResumePrivateOnboarding(result)) {
+    return { detail: await resume(), resumed: true }
+  }
+  return { detail: await restart(), resumed: false }
+}

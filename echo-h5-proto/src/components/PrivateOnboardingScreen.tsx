@@ -17,8 +17,9 @@ import {
   deriveOnboardingView,
   firstMissingQuestion,
   questionById,
+  pollGenerationProgress,
   recoverableMessage,
-  shouldResumePrivateOnboarding,
+  restoreOrRestartOnboarding,
 } from '../lib/onboardingFlow'
 import '../styles/privateOnboarding.css'
 
@@ -121,8 +122,8 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
     if (!detail || !job || !['generating', 'refining'].includes(detail.snapshot.status)) return
     const timer = window.setTimeout(async () => {
       try {
-        const next = await onboardingApi.get(detail.snapshot.onboardingId)
-        if (mounted.current) setDetail(next)
+        const next = await pollGenerationProgress((id) => onboardingApi.get(id), detail.snapshot)
+        if (mounted.current && next) setDetail(next)
       } catch (cause) {
         if (mounted.current) setError(errorMessage(cause))
       }
@@ -428,18 +429,18 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
       try {
         const outcome = await login({ intent: 'private_onboarding_generation', resourceId: snapshot.onboardingId, schemaVersion: 'v1' })
         if (!outcome) return
-        if (shouldResumePrivateOnboarding(outcome.result)) {
-          const restored = await afterIdentityRefresh(onIdentityChanged, () => onboardingApi.get(snapshot.onboardingId))
-          setDetail(restored)
-          setNotice('已经安全回到刚才的资料，可以继续生成。')
-        } else {
-          const fresh = await afterIdentityRefresh(onIdentityChanged, async () => {
+        const { detail: next, resumed } = await restoreOrRestartOnboarding(
+          outcome.result,
+          () => afterIdentityRefresh(onIdentityChanged, () => onboardingApi.get(snapshot.onboardingId)),
+          () => afterIdentityRefresh(onIdentityChanged, async () => {
             storeActive(null)
             return createFresh()
-          })
-          setDetail(fresh)
-          setNotice('已切换到原有账号。刚才匿名资料没有迁移，请重新上传。')
-        }
+          }),
+        )
+        setDetail(next)
+        setNotice(resumed
+          ? '已经安全回到刚才的资料，可以继续生成。'
+          : '已切换到原有账号。刚才匿名资料没有迁移，请重新上传。')
       } catch (cause) { setError(errorMessage(cause)) }
       finally { setBusy(false) }
     }
