@@ -29,6 +29,7 @@ import type {
   Window,
   Work,
   DraftWorkInput,
+  PublishWorkResult,
   ResubmitWorkResult,
   MuteDuration,
 } from '../types'
@@ -291,7 +292,7 @@ export const httpBackend: EchoBackend = {
 
   // 作品（WorksApi）。🔴 这几个方法的字段是照着服务端 WorkView 抄的，
   // 不是照着渲染需要设计的——广场页反着做的后果见 PRODUCT-IMPLEMENTATION-AUDIT §0b。
-  publishWork: (input) => post<{ work: Work; message: string }>('/works', input),
+  publishWork: (input) => post<PublishWorkResult>('/works', input),
   works: (cursor) => get<Paged<Work>>(`/works${pageQuery(cursor)}`),
   userWorks: (userId, cursor) =>
     get<AuthorWorksPage>(`/users/${encodeURIComponent(userId)}/works${pageQuery(cursor)}`),

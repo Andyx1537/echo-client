@@ -7,7 +7,7 @@
 //    瀑布流要判的就是高低错落，样本全挤在同一个比例里，
 //    有没有按真实宽高排版会长得一模一样。
 
-import type { DraftWorkInput, PublishWorkInput, ResubmitWorkResult, SubmissionCapability, SubmissionNextAction, Work } from '../types'
+import type { DraftWorkInput, PublishWorkInput, PublishWorkResult, ResubmitWorkResult, ReviewMode, SubmissionCapability, SubmissionNextAction, Work } from '../types'
 import { assetUrl } from '../lib/assetUrl'
 
 const OCCUPYING = new Set(['pending', 'uploading', 'submitting'])
@@ -122,9 +122,29 @@ type MockWork = Work & {
   moderationId?: string
 }
 
+export interface MockReviewEvidence {
+  id: string
+  sourceCardId: string
+  contentHash: string
+  result: 'passed' | 'restricted' | 'failed'
+  expiresAt: number
+  policyEpoch: number
+  aigcLabelReady: boolean
+  consentRevoked?: boolean
+  consumedByWorkId?: string
+}
+
 export interface WorksMockState {
   works: Work[]
+  evidences: MockReviewEvidence[]
 }
+
+/** 浏览器对照「原样复用」用。撤：去掉 App 的 fromCard 查询和这里的常量。 */
+export const REUSE_DEMO_CARD = 'card_reuse_ok'
+export const REUSE_DEMO_EVIDENCE = 'ev_card_ok'
+export const REUSE_DEMO_TITLE = '它最后一个下午'
+export const REUSE_DEMO_BODY = '阳光从阳台斜进来，它就趴在那块地板上。'
+export const REUSE_DEMO_MEDIA = assetUrl('seed-covers/cover-pet-nap.jpg')
 
 export function freshWorks(myAccountId: string): WorksMockState {
   const works = buildSeed()
@@ -140,17 +160,44 @@ export function freshWorks(myAccountId: string): WorksMockState {
     nextAction: 'edit',
     submittedContentVersion: 1,
   } as MockWork
-  return { works }
+  const reuseHash = mockReviewHash({
+    mediaType: 'image',
+    mediaKey: REUSE_DEMO_MEDIA,
+    title: REUSE_DEMO_TITLE,
+    body: REUSE_DEMO_BODY,
+    aiGenerated: false,
+  }, REUSE_DEMO_MEDIA, '')
+  return {
+    works,
+    evidences: [{
+      id: REUSE_DEMO_EVIDENCE,
+      sourceCardId: REUSE_DEMO_CARD,
+      contentHash: reuseHash,
+      result: 'passed',
+      expiresAt: Date.now() + 90 * 24 * 60 * 60 * 1000,
+      policyEpoch: 1,
+      aigcLabelReady: true,
+    }],
+  }
 }
 
-/** 发布。🔴 落 pending 而非 public，与服务端 OM3 口径一致 */
+/** 发布。自制上传或凭证不可复用 → pending；原样且凭证有效 → public。 */
 export function mockPublish(
   state: WorksMockState,
   input: PublishWorkInput,
   authorId: string,
   mediaUrl: string,
   posterUrl: string,
-): Work {
+): PublishWorkResult {
+  const decision = mockReviewDecision(state, input, authorId, mediaUrl, posterUrl)
+  if (decision.hard) {
+    throw Object.assign(new Error(decision.message), {
+      code: 3002,
+      detail: decision.reasonCode,
+      data: { reviewMode: 'none', workCreated: false, retryable: false },
+    })
+  }
+  const reused = decision.reviewMode === 'reused'
   const work: Work = {
     id: `wk_${Date.now()}`,
     authorId,
@@ -166,17 +213,31 @@ export function mockPublish(
     publishedAt: Date.now(),
     aiGenerated: input.aiGenerated ?? false,
     fromCard: Boolean(input.sourceCardId),
-    status: 'pending',
+    status: reused ? 'public' : 'pending',
     visibility: input.visibility ?? 'public',
     sourceCardId: input.sourceCardId ?? null,
     body: input.body ?? '',
     createdAt: Date.now(),
     contentVersion: 1,
-    nextAction: 'wait',
+    nextAction: reused ? 'none' : 'wait',
     submittedContentVersion: 1,
+    reviewMode: decision.reviewMode,
   } as MockWork
+  if (reused && decision.evidence) {
+    decision.evidence.consumedByWorkId = work.id
+    work.reviewMode = 'reused'
+  }
   state.works = [work, ...state.works]
-  return work
+  return {
+    work,
+    workId: work.id,
+    status: work.status,
+    reviewMode: decision.reviewMode,
+    reasonCode: decision.reasonCode,
+    contentVersion: 1,
+    nextAction: work.nextAction,
+    message: reused ? '已经在广场上了。' : '已提交，过一会儿就能在广场看到它了。',
+  }
 }
 
 export function mockAuthorView(work: Work, self: boolean): Work {
@@ -294,6 +355,58 @@ function mockNextAction(work: Work): SubmissionNextAction {
 
 function mockContentKey(work: Work): string {
   return [work.mediaType, work.mediaUrl, work.posterUrl, work.title, work.body ?? work.excerpt, work.width, work.height, work.durationMs, work.visibility].join('|')
+}
+
+export function mockReviewHash(
+  input: Pick<PublishWorkInput, 'mediaType' | 'mediaKey' | 'posterKey' | 'title' | 'body' | 'aiGenerated'>,
+  mediaUrl: string,
+  posterUrl: string,
+): string {
+  return [
+    input.mediaType,
+    input.mediaKey || mediaUrl,
+    input.mediaType === 'video' ? (input.posterKey || posterUrl) : '',
+    input.title ?? '',
+    input.body ?? '',
+    String(input.aiGenerated ?? false),
+  ].join('\n')
+}
+
+function mockReviewDecision(
+  state: WorksMockState,
+  input: PublishWorkInput,
+  authorId: string,
+  mediaUrl: string,
+  posterUrl: string,
+): { reviewMode: ReviewMode; reasonCode: string | null; hard: boolean; message: string; evidence?: MockReviewEvidence } {
+  if (!input.sourceCardId) {
+    return { reviewMode: 'full', reasonCode: 'user_upload', hard: false, message: '' }
+  }
+  const found = input.reviewEvidenceId
+    ? state.evidences.find((item) => item.id === input.reviewEvidenceId)
+    : state.evidences.find((item) => item.sourceCardId === input.sourceCardId && !item.consumedByWorkId)
+  if (!found) {
+    return { reviewMode: 'full', reasonCode: 'evidence_missing', hard: false, message: '' }
+  }
+  if (found.consentRevoked) {
+    return { reviewMode: 'none', reasonCode: 'consent_revoked', hard: true, message: '这份授权已经收回，不能这样发出去。' }
+  }
+  if (found.consumedByWorkId) {
+    return { reviewMode: 'none', reasonCode: 'evidence_consumed', hard: true, message: '这份审核已经用过了。' }
+  }
+  if (found.expiresAt <= Date.now()) {
+    return { reviewMode: 'full', reasonCode: 'evidence_expired', hard: false, message: '' }
+  }
+  if (found.result !== 'passed' || found.policyEpoch !== 1) {
+    return { reviewMode: 'full', reasonCode: 'evidence_policy_invalid', hard: false, message: '' }
+  }
+  if ((input.aiGenerated ?? false) && !found.aigcLabelReady) {
+    return { reviewMode: 'none', reasonCode: 'aigc_label_missing', hard: true, message: '还缺一个生成标识，先补上再发。' }
+  }
+  if (found.contentHash !== mockReviewHash(input, mediaUrl, posterUrl)) {
+    return { reviewMode: 'full', reasonCode: 'evidence_content_mismatch', hard: false, message: '' }
+  }
+  return { reviewMode: 'reused', reasonCode: null, hard: false, message: '', evidence: found }
 }
 
 /** 作品瀑布：只出已公开的（自己刚发的还在审核里，广场上看不到——这是对的）。 */

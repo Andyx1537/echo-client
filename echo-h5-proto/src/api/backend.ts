@@ -30,6 +30,7 @@ import type {
   Window,
   Work,
   PublishWorkInput,
+  PublishWorkResult,
   DraftWorkInput,
   ResubmitWorkResult,
   MuteDuration,
@@ -277,8 +278,8 @@ export interface EchoBackend {
   spectrumIntegrate(id: string): Promise<{ node: SpectrumNodeView }>
 
   // 12. 作品（t_work / WorksApi）。补的是主线第 10 步：此前服务端没有任何发布入口。
-  /** 发布作品。🔴 成功回执是「已提交」不是「已发布」——落库为 pending，还要过审 */
-  publishWork(input: PublishWorkInput): Promise<{ work: Work; message: string }>
+  /** 发布作品。默认「已提交」；凭证可复用时才是已经公开。 */
+  publishWork(input: PublishWorkInput): Promise<PublishWorkResult>
   /** 作品瀑布 */
   works(cursor?: string): Promise<Paged<Work>>
   /** 个人作品页。自己看自己时会带上 status/visibility */

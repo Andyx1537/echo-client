@@ -2,18 +2,18 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import type { PublishWorkInput, SubmissionCapability, Visibility, Work, WorkMediaType } from '../types'
 import { VISIBILITY_LABELS } from '../types'
-import { canSubmitWork, submissionWaitCopy } from '../lib/workSubmission'
+import { canSubmitWork, publishDoneSub, publishDoneTitle, submissionWaitCopy } from '../lib/workSubmission'
 import { getSession } from '../api/session'
 import AiGeneratedBadge from './AiGeneratedBadge'
 
 /**
  * 作品发布页。补的是主线第 10 步——此前服务端与前端都没有任何发布入口。
  *
- * 🔴 **「发布」不等于「公开」**。提交后作品落 `pending` 先进审核，广场上还看不到它
- * （`OM3`：生成/发布/过审是三个时刻，不得合并）。所以这一屏的成功态文案是
- * 「已提交」而不是「已发布」——写成后者，作者会立刻去广场找，找不到就以为坏了。
+ * 🔴 **「发布」不等于「公开」**。提交后作品默认落 `pending` 先进审核，广场上还看不到它
+ * （`OM3`：生成/发布/过审是三个时刻，不得合并）。例外：来路卡原样且公开审核凭证有效
+ * 时直接公开，成功态写「已经在广场上了」，不要写成还在等审核。
  *
- * 三态：`pick`（还没选素材）→ `edit`（填写）→ `done`（已提交）。
+ * 三态：`pick`（还没选素材）→ `edit`（填写）→ `done`（已提交或已公开）。
  */
 
 interface Props {
@@ -24,6 +24,11 @@ interface Props {
   sourceAiGenerated?: boolean
   /** 驳回后改同一条。没有它就是新投稿。 */
   reviseWork?: Work
+  /** 从回忆卡原样带入时预填。 */
+  initialTitle?: string
+  initialBody?: string
+  initialMedia?: Picked
+  reviewEvidenceId?: string
   onPublished?: (work: Work) => void
 }
 
@@ -46,15 +51,20 @@ export default function PublishScreen({
   sourceCardId,
   sourceAiGenerated = false,
   reviseWork,
+  initialTitle = '',
+  initialBody = '',
+  initialMedia,
+  reviewEvidenceId,
   onPublished,
 }: Props) {
-  const [phase, setPhase] = useState<Phase>('pick')
-  const [picked, setPicked] = useState<Picked | null>(null)
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
+  const [phase, setPhase] = useState<Phase>(initialMedia ? 'edit' : 'pick')
+  const [picked, setPicked] = useState<Picked | null>(initialMedia ?? null)
+  const [title, setTitle] = useState(initialTitle)
+  const [body, setBody] = useState(initialBody)
   const [visibility, setVisibility] = useState<Visibility>('public')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [doneMode, setDoneMode] = useState<string>('full')
   const [capability, setCapability] = useState<SubmissionCapability | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const revising = Boolean(reviseWork)
@@ -138,6 +148,7 @@ export default function PublishScreen({
           idempotencyKey: resubmitKey(reviseWork.id),
         })
         sessionStorage.removeItem(resubmitStorageKey(reviseWork.id))
+        setDoneMode('full')
         onPublished?.({ ...reviseWork, ...draft.work, status: result.status, contentVersion: result.contentVersion })
       } else {
         const input: PublishWorkInput = {
@@ -151,10 +162,12 @@ export default function PublishScreen({
           body: body.trim(),
           visibility,
           sourceCardId,
+          reviewEvidenceId,
           aiGenerated: sourceAiGenerated,
         }
-        const { work } = await api.publishWork(input)
-        onPublished?.(work)
+        const published = await api.publishWork(input)
+        setDoneMode(published.reviewMode ?? (published.work.status === 'public' ? 'reused' : 'full'))
+        onPublished?.(published.work)
       }
       setPhase('done')
     } catch (e) {
@@ -288,10 +301,8 @@ export default function PublishScreen({
       {phase === 'done' && (
         <div className="pub-done">
           <span className="pub-done-glow" />
-          <p className="pub-done-title">已提交</p>
-          <p className="pub-done-sub">
-            过一会儿就能在广场看到它了。在「我的作品」里可以看到它现在的状态。
-          </p>
+          <p className="pub-done-title">{publishDoneTitle(doneMode)}</p>
+          <p className="pub-done-sub">{publishDoneSub(doneMode)}</p>
           <button className="pub-submit ghost" onClick={onClose}>
             知道了
           </button>

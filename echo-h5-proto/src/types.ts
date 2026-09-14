@@ -699,6 +699,7 @@ export interface Work {
   /** 作者视角：当前草稿版本与下一步动作 */
   contentVersion?: number
   nextAction?: SubmissionNextAction
+  reviewMode?: ReviewMode
 }
 
 export interface AuthorWorksPage extends Paged<Work> {
@@ -737,7 +738,21 @@ export interface PublishWorkInput {
   visibility?: Visibility
   /** 从回忆卡发布时带上 */
   sourceCardId?: string
+  reviewEvidenceId?: string
   aiGenerated?: boolean
+}
+
+export type ReviewMode = 'reused' | 'full' | 'none'
+
+export interface PublishWorkResult {
+  work: Work
+  message: string
+  workId?: string
+  status?: WorkStatus
+  reviewMode?: ReviewMode
+  reasonCode?: string | null
+  contentVersion?: number
+  nextAction?: SubmissionNextAction
 }
 
 /** 驳回后保存草稿。主状态仍是 rejected。 */

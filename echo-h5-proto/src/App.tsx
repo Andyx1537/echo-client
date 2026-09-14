@@ -16,6 +16,13 @@ import SearchScreen from './components/SearchScreen'
 import UserProfileScreen from './components/UserProfileScreen'
 import PublishScreen from './components/PublishScreen'
 import WorksFeedScreen from './components/WorksFeedScreen'
+import {
+  REUSE_DEMO_BODY,
+  REUSE_DEMO_CARD,
+  REUSE_DEMO_EVIDENCE,
+  REUSE_DEMO_MEDIA,
+  REUSE_DEMO_TITLE,
+} from './api/worksMock'
 import type { FeedOpenContext } from './components/PlazaScreen'
 import { api, bootstrap, hasUnread, IS_MOCK, loadInbox, track } from './api'
 import {
@@ -74,6 +81,8 @@ export default function App() {
   // publishOpen 为浮层；worksOpen 是「我的作品」页，也走浮层（底签已满五个，不再加）
   const [publishOpen, setPublishOpen] = useState(false)
   const [reviseWork, setReviseWork] = useState<Work | null>(null)
+  const reuseDemo = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('fromCard') === REUSE_DEMO_CARD
   const [worksOpen, setWorksOpen] = useState(false)
   const [plazaCategory, setPlazaCategory] = useState<NonNullable<Window['category']> | null>(null)
 
@@ -222,6 +231,10 @@ export default function App() {
     }
   }, [refreshPet])
 
+  useEffect(() => {
+    if (reuseDemo) setPublishOpen(true)
+  }, [reuseDemo])
+
   const friend = relations.getById(friendId)
   const reelFriend = relations.getById(reelId)
 
@@ -323,6 +336,18 @@ export default function App() {
       return (
         <PublishScreen
           reviseWork={reviseWork ?? undefined}
+          sourceCardId={reuseDemo ? REUSE_DEMO_CARD : undefined}
+          reviewEvidenceId={reuseDemo ? REUSE_DEMO_EVIDENCE : undefined}
+          initialTitle={reuseDemo ? REUSE_DEMO_TITLE : undefined}
+          initialBody={reuseDemo ? REUSE_DEMO_BODY : undefined}
+          initialMedia={reuseDemo ? {
+            resourceId: REUSE_DEMO_MEDIA,
+            url: REUSE_DEMO_MEDIA,
+            mediaType: 'image',
+            width: 900,
+            height: 1350,
+            durationMs: 0,
+          } : undefined}
           onClose={() => {
             setPublishOpen(false)
             setReviseWork(null)

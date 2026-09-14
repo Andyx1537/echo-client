@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SubmissionCapability, Work } from '../types'
-import { canReviseWork, canSubmitWork, reviseActionCopy, submissionWaitCopy } from './workSubmission'
+import { canReviseWork, canSubmitWork, publishDoneSub, publishDoneTitle, reviseActionCopy, submissionWaitCopy } from './workSubmission'
 
 const pending: Work = {
   id: 'wk-pending', authorId: 'me', mediaType: 'image', mediaUrl: '/a.jpg', posterUrl: '',
@@ -32,5 +32,12 @@ describe('work submission capability', () => {
     expect(canReviseWork(pending)).toBe(false)
     expect(reviseActionCopy({ ...pending, status: 'rejected', nextAction: 'edit' })).toBe('改一改再提')
     expect(reviseActionCopy({ ...pending, status: 'rejected', nextAction: 'resubmit' })).toBe('改好了，再提一次')
+  })
+
+  it('reused review is already on the plaza, full review still waits', () => {
+    expect(publishDoneTitle('reused')).toBe('已经在广场上了')
+    expect(publishDoneSub('reused')).toContain('不用再等一轮')
+    expect(publishDoneTitle('full')).toBe('已提交')
+    expect(publishDoneSub('full')).toContain('过一会儿')
   })
 })

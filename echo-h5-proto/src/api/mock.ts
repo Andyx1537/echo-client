@@ -37,6 +37,7 @@ import type {
   ReactionKind,
   Work,
   PublishWorkInput,
+  PublishWorkResult,
   DraftWorkInput,
   ResubmitWorkResult,
 } from '../types'
@@ -49,6 +50,7 @@ import {
   mockResubmit,
   mockSaveDraft,
   mockSubmissionCapability,
+  type MockReviewEvidence,
   type WorksMockState,
 } from './worksMock'
 import { normalizeQuery, runSearch } from './searchLogic'
@@ -170,6 +172,7 @@ interface MockDB {
   arrivals?: ReactionArrival[]
   /** 作品（t_work）。旧缓存可缺省，读取一律走 worksOf() 兜底 */
   works?: Work[]
+  reviewEvidences?: MockReviewEvidence[]
 }
 
 const AVATAR_POOL = [
@@ -1120,7 +1123,7 @@ export const mockBackend: EchoBackend = {
 
   // ============================================================ 作品（t_work）
 
-  async publishWork(input: PublishWorkInput): Promise<{ work: Work; message: string }> {
+  async publishWork(input: PublishWorkInput): Promise<PublishWorkResult> {
     await delay(240)
     const d = load()
     const state = worksState(d)
@@ -1128,12 +1131,15 @@ export const mockBackend: EchoBackend = {
     if (!occupying.canSubmitWork) {
       throw new ApiError(3002, '还有一条作品正在处理，先等它走完再发新的。', 'submission_slot_occupied')
     }
-    // mock 里 mediaKey 就是 upload 返回的 objectURL 资源 id，直接当地址用
-    const work = mockPublish(state, input, d.accountId, input.mediaKey, input.posterKey ?? '')
-    d.works = state.works
-    save()
-    // 🔴 「已提交」不是「已发布」：落 pending，还要过审，广场上现在还看不到它
-    return { work, message: '已提交，过一会儿就能在广场看到它了。' }
+    try {
+      const result = mockPublish(state, input, d.accountId, input.mediaKey, input.posterKey ?? '')
+      d.works = state.works
+      d.reviewEvidences = state.evidences
+      save()
+      return result
+    } catch (error) {
+      throw toApiError(error)
+    }
   },
 
   async works(cursor): Promise<Paged<Work>> {
@@ -1210,10 +1216,14 @@ function toApiError(error: unknown): ApiError {
 
 /** 旧 localStorage 缓存里没有 works 字段，兜底建一份种子，不为此 bump DB_VERSION。 */
 function worksState(d: MockDB): WorksMockState {
+  const fresh = freshWorks(d.accountId)
   if (!d.works) {
-    d.works = freshWorks(d.accountId).works
+    d.works = fresh.works
   }
-  return { works: d.works }
+  if (!d.reviewEvidences) {
+    d.reviewEvidences = fresh.evidences
+  }
+  return { works: d.works, evidences: d.reviewEvidences }
 }
 
 /** 游标 = 下一页起始偏移，与 plaza 同一套（前端只认 nextCursor，不解析其含义）。 */
