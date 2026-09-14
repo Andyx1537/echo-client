@@ -486,7 +486,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
         <div className="pob-candidates">
           {detail.candidates.map((candidate) => (
             <article key={candidate.candidateId}>
-              <div className="pob-candidate-art" style={candidateStyle(candidate)}><span>{candidate.emoji || '🐾'}</span></div>
+              <div className="pob-candidate-art" style={candidateStyle(candidate)}>{candidate.imageUrl ? null : <span>{candidate.emoji || '🐾'}</span>}</div>
               <p>{candidate.signature || '从熟悉的日常里轻轻长出来'}</p>
               <button disabled={busy} onClick={() => void run((current) => onboardingApi.selectCandidate(current.snapshot.onboardingId, candidate.candidateId, current.snapshot.sessionVersion))}>这幅最像</button>
               <button className="pob-link" disabled={busy} onClick={() => void run((current) => onboardingApi.refine(current.snapshot.onboardingId, candidate.candidateId, 'closer_to_subject', current.snapshot.sessionVersion))}>基于这幅再靠近一点</button>
@@ -517,7 +517,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
     const selected = detail.candidates.find((candidate) => candidate.candidateId === snapshot.selectedCandidateId)
     return shell(
       <section className="pob-panel pob-center">
-        {selected && <div className="pob-final-art" style={candidateStyle(selected)}><span>{selected.emoji || '🐾'}</span></div>}
+        {selected && <div className="pob-final-art" style={candidateStyle(selected)}>{selected.imageUrl ? null : <span>{selected.emoji || '🐾'}</span>}</div>}
         <h2>确认“就是它”后，才会正式建立一扇窗口</h2>
         <p>重复点击也只会得到同一扇窗口；如果另一处已更新，会先恢复最新版本。</p>
         <button className="pob-primary" disabled={busy || !selected || !canPerform(snapshot, 'confirm')} onClick={() => selected && void run((current) => onboardingApi.confirm(current.snapshot.onboardingId, selected.candidateId, current.memoryUseConsent.consentVersion, current.snapshot.sessionVersion)).then((next) => next?.petId && onComplete(next.petId))}>
