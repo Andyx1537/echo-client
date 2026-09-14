@@ -22,6 +22,8 @@ interface Props {
   sourceCardId?: string
   /** 来路是 AI 生成的内容。🔴 决定要不要打 S-8 显式标识，不要按"是不是种子数据"猜 */
   sourceAiGenerated?: boolean
+  /** 驳回后改同一条。没有它就是新投稿。 */
+  reviseWork?: Work
   onPublished?: (work: Work) => void
 }
 
@@ -43,6 +45,7 @@ export default function PublishScreen({
   onClose,
   sourceCardId,
   sourceAiGenerated = false,
+  reviseWork,
   onPublished,
 }: Props) {
   const [phase, setPhase] = useState<Phase>('pick')
@@ -54,19 +57,42 @@ export default function PublishScreen({
   const [err, setErr] = useState<string | null>(null)
   const [capability, setCapability] = useState<SubmissionCapability | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const revising = Boolean(reviseWork)
   const allowPublish = canSubmitWork(capability)
   const waitCopy = submissionWaitCopy(capability)
-
   useEffect(() => {
     const accountId = getSession()?.accountId
     if (!accountId) return
     void api.userWorks(accountId).then((page) => setCapability(page.submissionCapability ?? null))
   }, [])
 
+  useEffect(() => {
+    if (!reviseWork) return
+    let alive = true
+    void api.workDetail(reviseWork.id).then(({ work }) => {
+      if (!alive) return
+      setTitle(work.title ?? '')
+      setBody(work.body ?? work.excerpt ?? '')
+      setVisibility(work.visibility ?? 'public')
+      setPicked({
+        resourceId: '',
+        url: work.mediaType === 'video' ? work.posterUrl || work.mediaUrl : work.mediaUrl,
+        mediaType: work.mediaType,
+        width: work.width,
+        height: work.height,
+        durationMs: work.durationMs,
+      })
+      setPhase('edit')
+    })
+    return () => {
+      alive = false
+    }
+  }, [reviseWork])
+
   const fromCard = Boolean(sourceCardId)
 
   async function onPick(files: FileList | null) {
-    if (!allowPublish) return
+    if (!revising && !allowPublish) return
     const f = files?.[0]
     if (!f) return
     setErr(null)
@@ -91,22 +117,45 @@ export default function PublishScreen({
     setErr(null)
     setBusy(true)
     try {
-      const input: PublishWorkInput = {
-        mediaType: picked.mediaType,
-        mediaKey: picked.resourceId,
-        // 视频首帧：真实实现要抽帧另传一份，这里先用素材本身占位
-        posterKey: picked.mediaType === 'video' ? picked.resourceId : undefined,
-        durationMs: picked.durationMs,
-        width: picked.width,
-        height: picked.height,
-        title: title.trim(),
-        body: body.trim(),
-        visibility,
-        sourceCardId,
-        aiGenerated: sourceAiGenerated,
+      if (reviseWork) {
+        const draft = await api.saveWorkDraft(reviseWork.id, {
+          mediaType: picked.mediaType,
+          ...(picked.resourceId
+            ? {
+                mediaKey: picked.resourceId,
+                posterKey: picked.mediaType === 'video' ? picked.resourceId : undefined,
+              }
+            : {}),
+          durationMs: picked.durationMs,
+          width: picked.width,
+          height: picked.height,
+          title: title.trim(),
+          body: body.trim(),
+          visibility,
+        })
+        const result = await api.resubmitWork(reviseWork.id, {
+          contentVersion: draft.contentVersion,
+          idempotencyKey: resubmitKey(reviseWork.id),
+        })
+        sessionStorage.removeItem(resubmitStorageKey(reviseWork.id))
+        onPublished?.({ ...reviseWork, ...draft.work, status: result.status, contentVersion: result.contentVersion })
+      } else {
+        const input: PublishWorkInput = {
+          mediaType: picked.mediaType,
+          mediaKey: picked.resourceId,
+          posterKey: picked.mediaType === 'video' ? picked.resourceId : undefined,
+          durationMs: picked.durationMs,
+          width: picked.width,
+          height: picked.height,
+          title: title.trim(),
+          body: body.trim(),
+          visibility,
+          sourceCardId,
+          aiGenerated: sourceAiGenerated,
+        }
+        const { work } = await api.publishWork(input)
+        onPublished?.(work)
       }
-      const { work } = await api.publishWork(input)
-      onPublished?.(work)
       setPhase('done')
     } catch (e) {
       setErr(e instanceof Error ? e.message : '没能发出去，再试一次？')
@@ -122,7 +171,7 @@ export default function PublishScreen({
           ‹
         </button>
         <span className="friend-topbar-title">
-          {fromCard ? '把这份回忆发出去' : '发布作品'}
+          {revising ? '改一改再提' : fromCard ? '把这份回忆发出去' : '发布作品'}
         </span>
       </div>
 
@@ -132,7 +181,7 @@ export default function PublishScreen({
           <button
             className="pub-dropzone"
             onClick={() => fileRef.current?.click()}
-            disabled={busy || !allowPublish}
+            disabled={busy || (!revising && !allowPublish)}
           >
             <span className="pub-dz-glyph" aria-hidden>
               ＋
@@ -228,7 +277,7 @@ export default function PublishScreen({
         <div className="pub-actions">
           {waitCopy && <p className="pub-err">{waitCopy}</p>}
           <button className="pub-submit" onClick={submit} disabled={busy || !allowPublish}>
-            {busy ? '正在提交…' : '发布'}
+            {busy ? '正在提交…' : revising ? '再提一次' : '发布'}
           </button>
           {/* 🔴 这句不能省：不说清楚会先进审核，作者提交后会立刻去广场找它 */}
           <p className="pub-hint center">发布后会先经过审核，通过了才会出现在广场上。</p>
@@ -278,6 +327,18 @@ function readDimensions(
       img.src = url
     }
   })
+}
+
+function resubmitStorageKey(workId: string): string {
+  return `echo.work-resubmit.${workId}`
+}
+
+function resubmitKey(workId: string): string {
+  const existing = sessionStorage.getItem(resubmitStorageKey(workId))
+  if (existing) return existing
+  const next = crypto.randomUUID()
+  sessionStorage.setItem(resubmitStorageKey(workId), next)
+  return next
 }
 
 function formatDuration(ms: number): string {

@@ -696,6 +696,9 @@ export interface Work {
   /** 仅详情 */
   body?: string
   createdAt?: number
+  /** 作者视角：当前草稿版本与下一步动作 */
+  contentVersion?: number
+  nextAction?: SubmissionNextAction
 }
 
 export interface AuthorWorksPage extends Paged<Work> {
@@ -735,6 +738,28 @@ export interface PublishWorkInput {
   /** 从回忆卡发布时带上 */
   sourceCardId?: string
   aiGenerated?: boolean
+}
+
+/** 驳回后保存草稿。主状态仍是 rejected。 */
+export interface DraftWorkInput {
+  mediaType?: WorkMediaType
+  mediaKey?: string
+  posterKey?: string
+  durationMs?: number
+  width?: number
+  height?: number
+  title?: string
+  body?: string
+  visibility?: Visibility
+  aiGenerated?: boolean
+}
+
+export interface ResubmitWorkResult {
+  workId: string
+  contentVersion: number
+  contentHash: string
+  status: WorkStatus
+  moderationId: string
 }
 
 export const WORK_STATUS_LABELS: Record<WorkStatus, string> = {

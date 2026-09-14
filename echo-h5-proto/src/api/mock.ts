@@ -37,6 +37,8 @@ import type {
   ReactionKind,
   Work,
   PublishWorkInput,
+  DraftWorkInput,
+  ResubmitWorkResult,
 } from '../types'
 import { cardIdOfArrival } from './arrivals'
 import {
@@ -44,6 +46,8 @@ import {
   mockAuthorWorks,
   mockFeed,
   mockPublish,
+  mockResubmit,
+  mockSaveDraft,
   mockSubmissionCapability,
   type WorksMockState,
 } from './worksMock'
@@ -1151,9 +1155,38 @@ export const mockBackend: EchoBackend = {
 
   async workDetail(workId): Promise<{ work: Work }> {
     await delay(90)
-    const found = worksState(load()).works.find((w) => w.id === workId)
+    const d = load()
+    const found = worksState(d).works.find((w) => w.id === workId)
     if (!found) throw new ApiError(2004, '这个作品找不到了。')
     return { work: found }
+  },
+
+  async saveWorkDraft(workId, input: DraftWorkInput): Promise<{ work: Work; contentVersion: number; status: string }> {
+    await delay(180)
+    const d = load()
+    const state = worksState(d)
+    try {
+      const work = mockSaveDraft(state, workId, d.accountId, input)
+      d.works = state.works
+      save()
+      return { work, contentVersion: work.contentVersion ?? 1, status: work.status ?? 'rejected' }
+    } catch (e) {
+      throw toApiError(e)
+    }
+  },
+
+  async resubmitWork(workId, input): Promise<ResubmitWorkResult> {
+    await delay(220)
+    const d = load()
+    const state = worksState(d)
+    try {
+      const result = mockResubmit(state, workId, d.accountId, input.contentVersion, input.idempotencyKey)
+      d.works = state.works
+      save()
+      return result
+    } catch (e) {
+      throw toApiError(e)
+    }
   },
 
   async deleteWork(workId): Promise<{ ok: boolean }> {
@@ -1167,6 +1200,12 @@ export const mockBackend: EchoBackend = {
     save()
     return { ok: true }
   },
+}
+
+function toApiError(error: unknown): ApiError {
+  if (error instanceof ApiError) return error
+  const extra = error as { code?: number; detail?: string; message?: string }
+  return new ApiError(extra.code ?? 2001, extra.message ?? '没能发出去，再试一次？', extra.detail)
 }
 
 /** 旧 localStorage 缓存里没有 works 字段，兜底建一份种子，不为此 bump DB_VERSION。 */

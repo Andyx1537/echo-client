@@ -33,7 +33,7 @@ import {
 } from './api/feedLogic'
 import { myWindowPetId } from './lib/myWindow'
 import { useRelations } from './hooks/useRelations'
-import type { Me, Message, MyPet, PlazaCard, Window } from './types'
+import type { Me, Message, MyPet, PlazaCard, Window, Work } from './types'
 import './styles/app.css'
 
 type Phase = 'loading' | 'onboarding' | 'app'
@@ -73,6 +73,7 @@ export default function App() {
   // —— 作品域（t_work）——
   // publishOpen 为浮层；worksOpen 是「我的作品」页，也走浮层（底签已满五个，不再加）
   const [publishOpen, setPublishOpen] = useState(false)
+  const [reviseWork, setReviseWork] = useState<Work | null>(null)
   const [worksOpen, setWorksOpen] = useState(false)
   const [plazaCategory, setPlazaCategory] = useState<NonNullable<Window['category']> | null>(null)
 
@@ -318,8 +319,16 @@ export default function App() {
   // —— 全屏浮层（优先级从高到低） ——
   const renderOverlay = () => {
     // 🔴 发布页排在最前：它可能从「我的作品」页里点开，排在后面会被那一屏盖住
-    if (publishOpen) {
-      return <PublishScreen onClose={() => setPublishOpen(false)} />
+    if (publishOpen || reviseWork) {
+      return (
+        <PublishScreen
+          reviseWork={reviseWork ?? undefined}
+          onClose={() => {
+            setPublishOpen(false)
+            setReviseWork(null)
+          }}
+        />
+      )
     }
     if (worksOpen) {
       return (
@@ -329,6 +338,7 @@ export default function App() {
           title="我的作品"
           onBack={() => setWorksOpen(false)}
           onOpenPublish={() => setPublishOpen(true)}
+          onReviseWork={(work) => setReviseWork(work)}
         />
       )
     }

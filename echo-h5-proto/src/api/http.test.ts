@@ -218,6 +218,32 @@ describe('http 光谱语义 → 视觉映射', () => {
   })
 })
 
+describe('http 驳回重提', () => {
+  it('saveWorkDraft / resubmitWork 走同一条 workId，不另造作品', async () => {
+    const draftFn = mockFetchOnce({
+      work: { id: 'wk-1', status: 'rejected', contentVersion: 2, nextAction: 'resubmit' },
+      contentVersion: 2,
+      status: 'rejected',
+    })
+    const draft = await httpBackend.saveWorkDraft('wk-1', { title: '改过' })
+    expect(draftFn.mock.calls[0][0]).toContain('/works/wk-1/draft')
+    expect(draft.contentVersion).toBe(2)
+    expect(draft.work.status).toBe('rejected')
+
+    const resubmitFn = mockFetchOnce({
+      workId: 'wk-1',
+      contentVersion: 2,
+      contentHash: 'abc',
+      status: 'pending',
+      moderationId: 'mod-1',
+    })
+    const resubmit = await httpBackend.resubmitWork('wk-1', { contentVersion: 2, idempotencyKey: 'k1' })
+    expect(resubmitFn.mock.calls[0][0]).toContain('/works/wk-1/resubmit')
+    expect(resubmit.workId).toBe('wk-1')
+    expect(resubmit.status).toBe('pending')
+  })
+})
+
 describe('http 作品投稿名额', () => {
   it('userWorks() 原样读 submissionCapability，不从 items 推算', async () => {
     mockFetchOnce({

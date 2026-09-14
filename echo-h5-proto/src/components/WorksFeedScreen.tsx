@@ -3,7 +3,7 @@ import type React from 'react'
 import { api } from '../api'
 import type { SubmissionCapability, Work } from '../types'
 import { WORK_STATUS_LABELS } from '../types'
-import { canSubmitWork, submissionWaitCopy } from '../lib/workSubmission'
+import { canReviseWork, canSubmitWork, reviseActionCopy, submissionWaitCopy } from '../lib/workSubmission'
 import AiGeneratedBadge from './AiGeneratedBadge'
 
 /**
@@ -21,6 +21,7 @@ interface Props {
   /** 个人作品页且是本人时为 true：会渲染审核状态与发布入口 */
   self?: boolean
   onOpenPublish?: () => void
+  onReviseWork?: (work: Work) => void
   title?: string
   /** 作为浮层打开时必须给，否则这一屏是个死胡同 */
   onBack?: () => void
@@ -30,6 +31,7 @@ export default function WorksFeedScreen({
   authorId,
   self = false,
   onOpenPublish,
+  onReviseWork,
   title,
   onBack,
 }: Props) {
@@ -141,7 +143,7 @@ export default function WorksFeedScreen({
         {cols.map((col, ci) => (
           <div className="works-col" key={ci}>
             {col.map((w) => (
-              <WorkCard key={w.id} work={w} self={mine} />
+              <WorkCard key={w.id} work={w} self={mine} onRevise={onReviseWork} />
             ))}
           </div>
         ))}
@@ -181,14 +183,20 @@ function Head({
   )
 }
 
-function WorkCard({ work, self }: { work: Work; self: boolean }) {
+function WorkCard({ work, self, onRevise }: { work: Work; self: boolean; onRevise?: (work: Work) => void }) {
   const ratio = work.width > 0 && work.height > 0 ? work.height / work.width : 1.25
   const cover = work.mediaType === 'video' ? work.posterUrl || work.mediaUrl : work.mediaUrl
   // 审核中/未通过只在作者本人视角出现——🔴 陌生人不该知道谁的作品在审核里
   const badge = self && work.status && work.status !== 'public' ? WORK_STATUS_LABELS[work.status] : null
+  const reviseCopy = self ? reviseActionCopy(work) : null
 
   return (
-    <button className="wk-card">
+    <button
+      className="wk-card"
+      onClick={() => {
+        if (canReviseWork(work)) onRevise?.(work)
+      }}
+    >
       <div className="wk-cover" style={{ paddingTop: `${Math.min(180, ratio * 100)}%` }}>
         <img className="wk-img" src={cover} alt="" loading="lazy" />
         {work.mediaType === 'video' && (
@@ -203,6 +211,7 @@ function WorkCard({ work, self }: { work: Work; self: boolean }) {
       <div className="wk-body">
         {work.title && <p className="wk-title">{work.title}</p>}
         {work.excerpt && <p className="wk-excerpt">{work.excerpt}</p>}
+        {reviseCopy && <p className="wk-excerpt">{reviseCopy}</p>}
       </div>
     </button>
   )

@@ -7,7 +7,7 @@
 //    瀑布流要判的就是高低错落，样本全挤在同一个比例里，
 //    有没有按真实宽高排版会长得一模一样。
 
-import type { PublishWorkInput, SubmissionCapability, Work } from '../types'
+import type { DraftWorkInput, PublishWorkInput, ResubmitWorkResult, SubmissionCapability, SubmissionNextAction, Work } from '../types'
 import { assetUrl } from '../lib/assetUrl'
 
 const OCCUPYING = new Set(['pending', 'uploading', 'submitting'])
@@ -115,17 +115,31 @@ function buildSeed(): Work[] {
   }))
 }
 
+type MockWork = Work & {
+  submittedContentVersion?: number
+  contentHash?: string
+  resubmitKey?: string
+  moderationId?: string
+}
+
 export interface WorksMockState {
   works: Work[]
 }
 
 export function freshWorks(myAccountId: string): WorksMockState {
   const works = buildSeed()
-  // 🔴 分两条挂到当前用户名下：一条已公开、一条审核中。
-  //    不这么做「我的作品」永远是空的（种子作者都是别人），
-  //    而空态看不出「审核中」角标长什么样——那正是这一屏最该验的东西。
+  // 🔴 分两条挂到当前用户名下：一条已公开、一条未通过。
+  //    未通过不占投稿名额，才能同时验「还能发新的」和「同一条改完再提」。
   works[1] = { ...works[1], authorId: myAccountId, status: 'public', visibility: 'public' }
-  works[4] = { ...works[4], authorId: myAccountId, status: 'pending', visibility: 'public' }
+  works[4] = {
+    ...works[4],
+    authorId: myAccountId,
+    status: 'rejected',
+    visibility: 'public',
+    contentVersion: 1,
+    nextAction: 'edit',
+    submittedContentVersion: 1,
+  } as MockWork
   return { works }
 }
 
@@ -157,9 +171,129 @@ export function mockPublish(
     sourceCardId: input.sourceCardId ?? null,
     body: input.body ?? '',
     createdAt: Date.now(),
-  }
+    contentVersion: 1,
+    nextAction: 'wait',
+    submittedContentVersion: 1,
+  } as MockWork
   state.works = [work, ...state.works]
   return work
+}
+
+export function mockAuthorView(work: Work, self: boolean): Work {
+  if (!self) return work
+  return { ...work, nextAction: mockNextAction(work), contentVersion: work.contentVersion ?? 1 }
+}
+
+export function mockSaveDraft(state: WorksMockState, workId: string, authorId: string, input: DraftWorkInput): Work {
+  const index = state.works.findIndex((work) => work.id === workId)
+  const current = index >= 0 ? (state.works[index] as MockWork) : undefined
+  if (!current || current.authorId !== authorId) {
+    throw Object.assign(new Error('这个作品找不到了。'), { code: 2004 })
+  }
+  if (current.status === 'takendown') {
+    throw Object.assign(new Error('这条已经不在了，不能从这里改完再发。'), { code: 3002, detail: 'work_takendown' })
+  }
+  if (current.status !== 'rejected') {
+    throw Object.assign(new Error('现在还不能改这一条。'), { code: 2001, detail: 'work_not_rejected' })
+  }
+  const next: MockWork = {
+    ...current,
+    title: input.title ?? current.title,
+    body: input.body ?? current.body ?? '',
+    excerpt: (input.body ?? current.body ?? current.excerpt).slice(0, 40),
+    visibility: input.visibility ?? current.visibility,
+    mediaType: input.mediaType ?? current.mediaType,
+    mediaUrl: input.mediaKey ?? current.mediaUrl,
+    posterUrl: input.mediaType === 'video' || current.mediaType === 'video'
+      ? (input.posterKey ?? current.posterUrl)
+      : '',
+    durationMs: input.durationMs ?? current.durationMs,
+    width: input.width ?? current.width,
+    height: input.height ?? current.height,
+    aiGenerated: input.aiGenerated ?? current.aiGenerated,
+  }
+  const submitted = current.submittedContentVersion ?? 1
+  const changed = mockContentKey(next) !== mockContentKey(current)
+  next.contentVersion = changed ? submitted + 1 : submitted
+  next.submittedContentVersion = submitted
+  next.status = 'rejected'
+  next.nextAction = next.contentVersion > submitted ? 'resubmit' : 'edit'
+  state.works[index] = next
+  return mockAuthorView(next, true)
+}
+
+export function mockResubmit(
+  state: WorksMockState,
+  workId: string,
+  authorId: string,
+  contentVersion: number,
+  idempotencyKey: string,
+): ResubmitWorkResult {
+  const occupying = mockSubmissionCapability(state, authorId)
+  const current = state.works.find((work) => work.id === workId) as MockWork | undefined
+  if (!current || current.authorId !== authorId) {
+    throw Object.assign(new Error('这个作品找不到了。'), { code: 2004 })
+  }
+  if (current.status === 'pending' && current.resubmitKey === idempotencyKey && current.moderationId) {
+    return {
+      workId: current.id,
+      contentVersion: current.contentVersion ?? 1,
+      contentHash: current.contentHash ?? mockContentKey(current),
+      status: 'pending',
+      moderationId: current.moderationId,
+    }
+  }
+  if (!occupying.canSubmitWork && occupying.blockingWorkId !== workId) {
+    throw Object.assign(new Error('还有一条作品正在处理，先等它走完再发新的。'), {
+      code: 3002,
+      detail: 'submission_slot_occupied',
+    })
+  }
+  if (current.status === 'takendown') {
+    throw Object.assign(new Error('这条已经不在了，不能从这里再发。'), { code: 3002, detail: 'work_takendown' })
+  }
+  if (current.status !== 'rejected') {
+    throw Object.assign(new Error('现在还不能再提这一条。'), { code: 2001, detail: 'work_not_rejected' })
+  }
+  if (contentVersion !== (current.contentVersion ?? 1)) {
+    throw Object.assign(new Error('先刷新一下再提。'), { code: 2001, detail: 'work_version_conflict' })
+  }
+  const submitted = current.submittedContentVersion ?? 1
+  const nextVersion = (current.contentVersion ?? 1) <= submitted ? submitted + 1 : (current.contentVersion ?? 1)
+  const hash = mockContentKey(current)
+  const moderationId = `mod_${Date.now()}`
+  const next: MockWork = {
+    ...current,
+    status: 'pending',
+    contentVersion: nextVersion,
+    submittedContentVersion: nextVersion,
+    contentHash: hash,
+    nextAction: 'wait',
+    publishedAt: Date.now(),
+    resubmitKey: idempotencyKey,
+    moderationId,
+  }
+  state.works = state.works.map((work) => (work.id === workId ? next : work))
+  return {
+    workId,
+    contentVersion: nextVersion,
+    contentHash: hash,
+    status: 'pending',
+    moderationId,
+  }
+}
+
+function mockNextAction(work: Work): SubmissionNextAction {
+  if (work.status && OCCUPYING.has(work.status)) return 'wait'
+  if (work.status === 'rejected') {
+    const mock = work as MockWork
+    return (mock.contentVersion ?? 1) > (mock.submittedContentVersion ?? 1) ? 'resubmit' : 'edit'
+  }
+  return 'none'
+}
+
+function mockContentKey(work: Work): string {
+  return [work.mediaType, work.mediaUrl, work.posterUrl, work.title, work.body ?? work.excerpt, work.width, work.height, work.durationMs, work.visibility].join('|')
 }
 
 /** 作品瀑布：只出已公开的（自己刚发的还在审核里，广场上看不到——这是对的）。 */
@@ -172,6 +306,7 @@ export function mockAuthorWorks(state: WorksMockState, authorId: string, self: b
   return state.works
     .filter((w) => w.authorId === authorId)
     .filter((w) => self || !w.status || w.status === 'public')
+    .map((w) => mockAuthorView(w, self))
 }
 
 export function mockSubmissionCapability(state: WorksMockState, authorId: string): SubmissionCapability {

@@ -30,6 +30,8 @@ import type {
   Window,
   Work,
   PublishWorkInput,
+  DraftWorkInput,
+  ResubmitWorkResult,
   MuteDuration,
   SpectrumNodeView,
   ShadowAreaView,
@@ -282,6 +284,8 @@ export interface EchoBackend {
   /** 个人作品页。自己看自己时会带上 status/visibility */
   userWorks(userId: string, cursor?: string): Promise<AuthorWorksPage>
   workDetail(workId: string): Promise<{ work: Work }>
+  saveWorkDraft(workId: string, input: DraftWorkInput): Promise<{ work: Work; contentVersion: number; status: string }>
+  resubmitWork(workId: string, input: { contentVersion: number; idempotencyKey: string }): Promise<ResubmitWorkResult>
   deleteWork(workId: string): Promise<{ ok: boolean }>
 }
 

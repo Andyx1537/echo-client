@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SubmissionCapability, Work } from '../types'
-import { canSubmitWork, submissionWaitCopy } from './workSubmission'
+import { canReviseWork, canSubmitWork, reviseActionCopy, submissionWaitCopy } from './workSubmission'
 
 const pending: Work = {
   id: 'wk-pending', authorId: 'me', mediaType: 'image', mediaUrl: '/a.jpg', posterUrl: '',
@@ -25,5 +25,12 @@ describe('work submission capability', () => {
     expect(canSubmitWork(allowed)).not.toBe(items.every((work) => work.status !== 'pending'))
     expect(submissionWaitCopy(blocked)).toContain('正在处理')
     expect(submissionWaitCopy(allowed)).toBeNull()
+  })
+
+  it('only rejected works can be revised, and nextAction comes from the server', () => {
+    expect(canReviseWork({ ...pending, status: 'rejected' })).toBe(true)
+    expect(canReviseWork(pending)).toBe(false)
+    expect(reviseActionCopy({ ...pending, status: 'rejected', nextAction: 'edit' })).toBe('改一改再提')
+    expect(reviseActionCopy({ ...pending, status: 'rejected', nextAction: 'resubmit' })).toBe('改好了，再提一次')
   })
 })

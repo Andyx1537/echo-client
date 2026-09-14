@@ -28,6 +28,8 @@ import type {
   Visibility,
   Window,
   Work,
+  DraftWorkInput,
+  ResubmitWorkResult,
   MuteDuration,
 } from '../types'
 import {
@@ -91,6 +93,12 @@ async function request<T>(
 function post<T>(path: string, body?: unknown): Promise<T> {
   return request<T>(path, {
     method: 'POST',
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+}
+function put<T>(path: string, body?: unknown): Promise<T> {
+  return request<T>(path, {
+    method: 'PUT',
     body: body === undefined ? undefined : JSON.stringify(body),
   })
 }
@@ -288,5 +296,12 @@ export const httpBackend: EchoBackend = {
   userWorks: (userId, cursor) =>
     get<AuthorWorksPage>(`/users/${encodeURIComponent(userId)}/works${pageQuery(cursor)}`),
   workDetail: (workId) => get<{ work: Work }>(`/works/${encodeURIComponent(workId)}`),
+  saveWorkDraft: (workId, input: DraftWorkInput) =>
+    put<{ work: Work; contentVersion: number; status: string }>(
+      `/works/${encodeURIComponent(workId)}/draft`,
+      input,
+    ),
+  resubmitWork: (workId, input) =>
+    post<ResubmitWorkResult>(`/works/${encodeURIComponent(workId)}/resubmit`, input),
   deleteWork: (workId) => del<{ ok: boolean }>(`/works/${encodeURIComponent(workId)}`),
 }
