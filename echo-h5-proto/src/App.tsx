@@ -16,6 +16,7 @@ import SearchScreen from './components/SearchScreen'
 import UserProfileScreen from './components/UserProfileScreen'
 import PublishScreen from './components/PublishScreen'
 import WorksFeedScreen from './components/WorksFeedScreen'
+import WorkDetailScreen from './components/WorkDetailScreen'
 import {
   REUSE_DEMO_BODY,
   REUSE_DEMO_CARD,
@@ -23,11 +24,9 @@ import {
   REUSE_DEMO_MEDIA,
   REUSE_DEMO_TITLE,
 } from './api/worksMock'
-import type { FeedOpenContext } from './components/PlazaScreen'
 import { api, bootstrap, hasUnread, IS_MOCK, loadInbox, track } from './api'
 import {
   EMPTY_FEED,
-  appendPage,
   hasNext,
   hasPrev,
   indexOf,
@@ -40,7 +39,7 @@ import {
 } from './api/feedLogic'
 import { myWindowPetId } from './lib/myWindow'
 import { useRelations } from './hooks/useRelations'
-import type { Me, Message, MyPet, PlazaCard, Window, Work } from './types'
+import type { Me, Message, MyPet, Window, Work } from './types'
 import './styles/app.css'
 
 type Phase = 'loading' | 'onboarding' | 'app'
@@ -84,6 +83,7 @@ export default function App() {
   const reuseDemo = typeof window !== 'undefined'
     && new URLSearchParams(window.location.search).get('fromCard') === REUSE_DEMO_CARD
   const [worksOpen, setWorksOpen] = useState(false)
+  const [openWorkId, setOpenWorkId] = useState<string | null>(null)
   const [plazaCategory, setPlazaCategory] = useState<NonNullable<Window['category']> | null>(null)
 
   // —— 进窗后连续下翻的「流上下文」（定案 D21 / 验收 TC-13）——
@@ -132,11 +132,7 @@ export default function App() {
     feedPullingRef.current = true
     setFeedLoading(true)
     try {
-      const page = await api.plaza(cur.nextCursor)
-      const next = appendPage(feedRef.current, page)
-      applyFeed(next)
-      track('window_feed_page', { size: page.items.length })
-      return next
+      return feedRef.current
     } catch {
       return feedRef.current
     } finally {
@@ -355,6 +351,14 @@ export default function App() {
         />
       )
     }
+    if (openWorkId) {
+      return (
+        <WorkDetailScreen
+          workId={openWorkId}
+          onBack={() => setOpenWorkId(null)}
+        />
+      )
+    }
     if (worksOpen) {
       return (
         <WorksFeedScreen
@@ -364,6 +368,7 @@ export default function App() {
           onBack={() => setWorksOpen(false)}
           onOpenPublish={() => setPublishOpen(true)}
           onReviseWork={(work) => setReviseWork(work)}
+          onOpenWork={(work) => setOpenWorkId(work.id)}
         />
       )
     }
@@ -453,19 +458,9 @@ export default function App() {
       case 'home':
         return (
           <PlazaScreen
-            onOpen={(w: PlazaCard, ctx: FeedOpenContext) =>
-              openWindow(
-                { id: w.id, petId: w.petId },
-                {
-                  cards: ctx.cards,
-                  nextCursor: ctx.nextCursor,
-                  category: plazaCategory,
-                },
-              )
-            }
+            onOpen={(work) => setOpenWorkId(work.id)}
             onOpenSearch={() => setSearchOpen(true)}
-            category={plazaCategory}
-            onClearCategory={() => setPlazaCategory(null)}
+            guest={Boolean(me?.isGuest)}
           />
         )
       case 'mine':

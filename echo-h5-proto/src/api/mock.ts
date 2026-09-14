@@ -32,10 +32,9 @@ import type {
   FeatureFlags,
   MessageDisposition,
   PendingMessage,
-  PlazaCard,
+  Work,
   ReactionArrival,
   ReactionKind,
-  Work,
   PublishWorkInput,
   PublishWorkResult,
   DraftWorkInput,
@@ -44,6 +43,8 @@ import type {
 import { cardIdOfArrival } from './arrivals'
 import {
   freshWorks,
+  mockPlazaWorks,
+  mockAuthorView,
   mockAuthorWorks,
   mockFeed,
   mockPublish,
@@ -88,7 +89,7 @@ const DB_KEY = 'echo.mock.db'
 // v4：移除手写的回应到达 m-2 / m-5，改由 seedReactionArrivals + mergeArrivals 产生
 // （`PRODUCT-MINDMAP §6.2 B20`）。不 bump 的话，装过旧版本的人会继续看到 m-5 里
 // 那句「轻轻留下了一束心意」——正是本轮判定为越线的措辞。
-const DB_VERSION = 4
+const DB_VERSION = 5
 const DAILY_FREE = 5
 /** 一次「补充心意」到账的额度（离线可跑；契约 §0.7 #3「献花可买」） */
 const FLOWER_TOPUP_COUNT = 10
@@ -97,7 +98,6 @@ const FLOWER_TOPUP_COUNT = 10
  * 广场瀑布与「进窗后连续下翻」（D21/TC-13）共用同一条流、同一个游标。
  * 离线可翻的总条数以本地种子窗口数为上限，翻完给温柔收尾态（不空白、不报错）。
  */
-const PLAZA_PAGE_SIZE = 6
 /**
  * 「被接住」的到达每页多少**张卡**（与真后端 `limit` 默认值一致）。
  * 🔴 单位是卡不是回应行——见 `reactionArrivals` 的注释。
@@ -173,6 +173,8 @@ interface MockDB {
   /** 作品（t_work）。旧缓存可缺省，读取一律走 worksOf() 兜底 */
   works?: Work[]
   reviewEvidences?: MockReviewEvidence[]
+  /** 匿名共鸣厅批次。绑定后不用。旧缓存可缺省 */
+  plazaBatch?: { ids: string[]; startedAt: number }
 }
 
 const AVATAR_POOL = [
@@ -746,32 +748,15 @@ export const mockBackend: EchoBackend = {
     }
   },
 
-  async plaza(cursor): Promise<Paged<PlazaCard>> {
+  async plaza(cursor): Promise<Paged<Work>> {
     await delay(120)
-    // 游标 = 下一页起始偏移（离线实现细节；前端只认 nextCursor 不解析其含义）
-    const start = Math.max(0, Number(cursor ?? 0) || 0)
-    const slice = catalog.slice(start, start + PLAZA_PAGE_SIZE)
-    const end = start + slice.length
-    // 用暖光浓度呈现，去精确数字
-    const items: PlazaCard[] = slice.map((w) => ({
-      id: w.id,
-      petId: w.petId,
-      title: w.title ?? w.petName,
-      excerpt: w.recent,
-      cover: w.cover.imageUrl ?? '',
-      hasCover: Boolean(w.cover.imageUrl),
-      sourceType: 'record',
-      topicIds: w.category ? [w.category] : [],
-      publishedAt: null,
-      presentation: {
-        category: w.category,
-        cover: w.cover,
-        ownerName: w.ownerName,
-        ownerAvatar: w.ownerAvatar,
-        ownerAccountType: w.ownerAccountType,
-      },
-    }))
-    return { items, nextCursor: end < catalog.length ? String(end) : null }
+    const d = load()
+    const page = mockPlazaWorks(worksState(d), d.isGuest, d.plazaBatch, Date.now())
+    if (d.isGuest && page.batch && page.batch !== d.plazaBatch) {
+      d.plazaBatch = page.batch
+      save()
+    }
+    return slicePage(page.items, cursor)
   },
 
   async windowDetail(rawWindowId): Promise<WindowDetail> {
@@ -1164,7 +1149,11 @@ export const mockBackend: EchoBackend = {
     const d = load()
     const found = worksState(d).works.find((w) => w.id === workId)
     if (!found) throw new ApiError(2004, '这个作品找不到了。')
-    return { work: found }
+    const self = found.authorId === d.accountId
+    if (!self && found.status && found.status !== 'public') {
+      throw new ApiError(2004, '这个作品找不到了。')
+    }
+    return { work: mockAuthorView(found, self) }
   },
 
   async saveWorkDraft(workId, input: DraftWorkInput): Promise<{ work: Work; contentVersion: number; status: string }> {

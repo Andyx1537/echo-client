@@ -112,32 +112,37 @@ describe('http 广场游标续拉（TC-13 同一条流）', () => {
     expect(url).toMatch(/\/plaza$/)
   })
 
-  it('plaza() 按 CardView 契约读取卡片，不要求窗口展示字段', async () => {
+  it('plaza() 按作品列表读取，不带私域卡入口', async () => {
     mockFetchOnce({
       items: [{
-        id: 'card-1',
-        petId: 'pet-1',
-        title: '',
+        id: 'wk-1',
+        authorId: 'acc-1',
+        mediaType: 'image',
+        mediaUrl: '/a.jpg',
+        posterUrl: '',
+        durationMs: 0,
+        width: 900,
+        height: 1200,
+        title: '公开的',
         excerpt: '正文首句。',
-        cover: '',
-        hasCover: false,
-        sourceType: 'record',
         topicIds: [],
         publishedAt: 100,
+        aiGenerated: false,
+        fromCard: false,
+        sourceType: 'user_upload',
       }],
       nextCursor: null,
     })
     const res = await httpBackend.plaza()
     expect(res.items[0]).toMatchObject({
-      id: 'card-1',
-      petId: 'pet-1',
+      id: 'wk-1',
       excerpt: '正文首句。',
-      hasCover: false,
-      sourceType: 'record',
+      sourceType: 'user_upload',
+      aiGenerated: false,
     })
-    expect(res.items[0]).not.toHaveProperty('recent')
-    expect(res.items[0]).not.toHaveProperty('warmthLevel')
-    expect(res.items[0]).not.toHaveProperty('ownerName')
+    expect(res.items[0]).not.toHaveProperty('sourceCardId')
+    expect(res.items[0]).not.toHaveProperty('petId')
+    expect(res.items[0]).not.toHaveProperty('status')
   })
 })
 

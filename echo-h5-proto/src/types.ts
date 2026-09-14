@@ -689,6 +689,8 @@ export interface Work {
   aiGenerated: boolean
   /** 是否由回忆卡发布而来 */
   fromCard: boolean
+  /** 列表与详情都下发。陌生人看不到 sourceCardId */
+  sourceType?: 'memory_card' | 'user_upload'
   /** 以下三项只在作者本人视角下发 */
   status?: WorkStatus
   visibility?: Visibility

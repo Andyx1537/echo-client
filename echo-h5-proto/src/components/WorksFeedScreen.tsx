@@ -9,10 +9,7 @@ import AiGeneratedBadge from './AiGeneratedBadge'
 /**
  * 作品瀑布 / 个人作品页。同一个组件两种用法，由 `authorId` 区分。
  *
- * 🔴 **不复用广场页那条链路。** `GET /plaza` 服务端发的是回忆卡（`CardView`），
- * 前端却按「窗」（`Window`）解析，两边只有四个字段对得上——因为前端默认跑 mock，
- * 这个不一致至今没暴露（见 `PRODUCT-IMPLEMENTATION-AUDIT §0b`）。
- * 作品这条链路的字段是照着服务端 `WorkView` 抄下来的，别反过来。
+ * 全站公开流走 {@code GET /plaza}，不再走旧的 {@code GET /works} 第二套瀑布。
  */
 
 interface Props {
@@ -22,6 +19,7 @@ interface Props {
   self?: boolean
   onOpenPublish?: () => void
   onReviseWork?: (work: Work) => void
+  onOpenWork?: (work: Work) => void
   title?: string
   /** 作为浮层打开时必须给，否则这一屏是个死胡同 */
   onBack?: () => void
@@ -32,6 +30,7 @@ export default function WorksFeedScreen({
   self = false,
   onOpenPublish,
   onReviseWork,
+  onOpenWork,
   title,
   onBack,
 }: Props) {
@@ -49,7 +48,7 @@ export default function WorksFeedScreen({
     let alive = true
     setItems(null)
     if (mine) setCapability(null)
-    const load = mine ? api.userWorks(authorId as string) : api.works()
+    const load = mine ? api.userWorks(authorId as string) : api.plaza()
     load.then((p) => {
       if (!alive) return
       setItems(p.items)
@@ -67,7 +66,7 @@ export default function WorksFeedScreen({
     try {
       const p = mine
         ? await api.userWorks(authorId as string, cursor)
-        : await api.works(cursor)
+        : await api.plaza(cursor)
       setItems((cur) => [...(cur ?? []), ...p.items])
       setCursor(p.nextCursor)
     } finally {
@@ -143,7 +142,7 @@ export default function WorksFeedScreen({
         {cols.map((col, ci) => (
           <div className="works-col" key={ci}>
             {col.map((w) => (
-              <WorkCard key={w.id} work={w} self={mine} onRevise={onReviseWork} />
+              <WorkCard key={w.id} work={w} self={mine} onRevise={onReviseWork} onOpen={onOpenWork} />
             ))}
           </div>
         ))}
@@ -183,7 +182,7 @@ function Head({
   )
 }
 
-function WorkCard({ work, self, onRevise }: { work: Work; self: boolean; onRevise?: (work: Work) => void }) {
+function WorkCard({ work, self, onRevise, onOpen }: { work: Work; self: boolean; onRevise?: (work: Work) => void; onOpen?: (work: Work) => void }) {
   const ratio = work.width > 0 && work.height > 0 ? work.height / work.width : 1.25
   const cover = work.mediaType === 'video' ? work.posterUrl || work.mediaUrl : work.mediaUrl
   // 审核中/未通过只在作者本人视角出现——🔴 陌生人不该知道谁的作品在审核里
@@ -195,6 +194,7 @@ function WorkCard({ work, self, onRevise }: { work: Work; self: boolean; onRevis
       className="wk-card"
       onClick={() => {
         if (canReviseWork(work)) onRevise?.(work)
+        else onOpen?.(work)
       }}
     >
       <div className="wk-cover" style={{ paddingTop: `${Math.min(180, ratio * 100)}%` }}>

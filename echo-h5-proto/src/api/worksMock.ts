@@ -91,6 +91,167 @@ const SEED: Array<
     width: 1000, height: 1200, mediaType: 'image',
     aiGenerated: false, fromCard: false, authorId: 'acc_zhou', minutesAgo: 540,
   },
+  {
+    cover: 'seed-covers/cover-pet-butterfly.jpg',
+    title: '那天它追过一只蝴蝶',
+    excerpt: '草地还是湿的，它跑出去的时候我没来得及喊住。',
+    width: 900, height: 1200, mediaType: 'image',
+    aiGenerated: true, fromCard: true, authorId: 'acc_mu', minutesAgo: 620,
+  },
+  {
+    cover: 'seed-covers/cover-pet-snowday.jpg',
+    title: '第一场雪它站了很久',
+    excerpt: '我以为它冷，后来才知道它是在看。',
+    width: 900, height: 1280, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_lin', minutesAgo: 700,
+  },
+  {
+    cover: 'seed-covers/cover-pet-sunset.jpg',
+    title: '',
+    excerpt: '天快黑的时候它总要再看一眼窗外。',
+    width: 1000, height: 1250, mediaType: 'image',
+    aiGenerated: false, fromCard: true, authorId: 'acc_he', minutesAgo: 780,
+  },
+  {
+    cover: 'seed-covers/cover-pet-seaside.jpg',
+    title: '海水碰到爪子它愣住了',
+    excerpt: '那是它第一次看见这么大的水。',
+    width: 1200, height: 900, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_zhou', minutesAgo: 860,
+  },
+  {
+    cover: 'seed-covers/red-suitcase-v1.jpg',
+    title: '红皮箱还在储物间',
+    excerpt: '拉链坏了以后就再也没出过门。',
+    width: 900, height: 1350, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_he', minutesAgo: 940,
+  },
+  {
+    cover: 'seed-covers/cassette-v1.jpg',
+    title: '磁带转不动了',
+    excerpt: '里面是谁的声音，我现在也不敢倒回去听。',
+    width: 1000, height: 1300, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_zhou', minutesAgo: 1020,
+  },
+  {
+    cover: 'seed-covers/user-classroom-v3.jpg',
+    title: '最后一排靠窗',
+    excerpt: '放学铃响的时候，桌上还摊着没写完的那页。',
+    width: 900, height: 1180, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_mu', minutesAgo: 1100,
+  },
+  {
+    cover: 'seed-covers/user-last-bus-v3.jpg',
+    title: '末班车总是差一点',
+    excerpt: '站台上那个人回头的样子，后来再也没遇上。',
+    width: 1350, height: 900, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_lin', minutesAgo: 1180,
+  },
+  {
+    cover: 'seed-covers/user-noodle-shop-v3.jpg',
+    title: '那碗面现在换人煮了',
+    excerpt: '汤还是旧味道，位子换成了别人的。',
+    width: 900, height: 1220, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_he', minutesAgo: 1260,
+  },
+  {
+    cover: 'seed-covers/user-basketball-v3.jpg',
+    title: '',
+    excerpt: '球框还在，人散了以后场地特别空。',
+    width: 1000, height: 1250, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_zhou', minutesAgo: 1340,
+  },
+  {
+    cover: 'seed-covers/cover-daily-mug.jpg',
+    title: '杯沿缺的那一小块',
+    excerpt: '每次喝水嘴唇都会碰到，也不想换新的。',
+    width: 900, height: 1125, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_lin', minutesAgo: 1420,
+  },
+  {
+    cover: 'seed-covers/cover-family-heightmarks.jpg',
+    title: '再往上就没有了',
+    excerpt: '最高的那道线是它离开前一年画的。',
+    width: 1100, height: 900, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_he', minutesAgo: 1500,
+  },
+  {
+    cover: 'seed-covers/cover-bond-letter.jpg',
+    title: '信封没封口',
+    excerpt: '写到一半就不写了，纸还夹在书里。',
+    width: 900, height: 1320, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_zhou', minutesAgo: 1580,
+  },
+  {
+    cover: 'seed-covers/cover-daily-camera.jpg',
+    title: '胶卷还在机身里',
+    excerpt: '我怕洗出来的那天，就真的只剩下这些。',
+    width: 1200, height: 900, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_mu', minutesAgo: 1660,
+  },
+  {
+    cover: 'seed-covers/cover-pet-bowl.jpg',
+    title: '碗沿还是湿的',
+    excerpt: '其实没有，是我自己倒的。',
+    width: 900, height: 1280, mediaType: 'image',
+    aiGenerated: false, fromCard: true, authorId: 'acc_lin', minutesAgo: 1740,
+  },
+  {
+    cover: 'seed-covers/cover-pet-blanket.jpg',
+    title: '毯子叠起来就小了一圈',
+    excerpt: '以前它躺在上面的时候，毯子是圆的。',
+    width: 900, height: 1200, mediaType: 'video', durationMs: 16_000,
+    aiGenerated: true, fromCard: true, authorId: 'acc_mu', minutesAgo: 1820,
+  },
+  {
+    cover: 'seed-covers/cover-pet-collar.jpg',
+    title: '铃铛不响了',
+    excerpt: '我把它放到抽屉最里面，出门前还是会看一眼。',
+    width: 1000, height: 1300, mediaType: 'image',
+    aiGenerated: false, fromCard: true, authorId: 'acc_he', minutesAgo: 1900,
+  },
+  {
+    cover: 'seed-covers/cover-pet-ball.jpg',
+    title: '球上的牙印还在',
+    excerpt: '橡胶已经裂了，我还是没扔掉。',
+    width: 900, height: 1400, mediaType: 'image',
+    aiGenerated: false, fromCard: true, authorId: 'acc_zhou', minutesAgo: 1980,
+  },
+  {
+    cover: 'seed-covers/cover-family-wok.jpg',
+    title: '',
+    excerpt: '锅沿那圈黑，是很多次晚饭留下的。',
+    width: 1000, height: 1180, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_lin', minutesAgo: 2060,
+  },
+  {
+    cover: 'seed-covers/cover-pet-nap.jpg',
+    title: '光斑刚好够它躺下',
+    excerpt: '下午三点，地板会暖一小块。',
+    width: 900, height: 1350, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_he', minutesAgo: 2140,
+  },
+  {
+    cover: 'seed-covers/user-classroom-v3.jpg',
+    title: '黑板没擦干净',
+    excerpt: '最边上还能认出半个名字。',
+    width: 900, height: 1240, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_mu', minutesAgo: 2220,
+  },
+  {
+    cover: 'seed-covers/red-suitcase-v1.jpg',
+    title: '轮子卡住的那天',
+    excerpt: '以后出门就改用袋子了。',
+    width: 900, height: 1280, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_zhou', minutesAgo: 2300,
+  },
+  {
+    cover: 'seed-covers/cassette-v1.jpg',
+    title: 'A面听完了',
+    excerpt: 'B面是空白，像故意留给谁的。',
+    width: 1000, height: 1260, mediaType: 'image',
+    aiGenerated: false, fromCard: false, authorId: 'acc_lin', minutesAgo: 2380,
+  },
 ]
 
 function buildSeed(): Work[] {
@@ -112,6 +273,8 @@ function buildSeed(): Work[] {
     publishedAt: now - s.minutesAgo * 60_000,
     aiGenerated: s.aiGenerated,
     fromCard: s.fromCard,
+    sourceType: s.fromCard ? 'memory_card' : 'user_upload',
+    body: s.excerpt,
   }))
 }
 
@@ -241,7 +404,7 @@ export function mockPublish(
 }
 
 export function mockAuthorView(work: Work, self: boolean): Work {
-  if (!self) return work
+  if (!self) return mockPublicView(work)
   return { ...work, nextAction: mockNextAction(work), contentVersion: work.contentVersion ?? 1 }
 }
 
@@ -411,7 +574,60 @@ function mockReviewDecision(
 
 /** 作品瀑布：只出已公开的（自己刚发的还在审核里，广场上看不到——这是对的）。 */
 export function mockFeed(state: WorksMockState): Work[] {
-  return state.works.filter((w) => !w.status || w.status === 'public')
+  return state.works.filter((w) => !w.status || w.status === 'public').map((w) => mockPublicView(w))
+}
+
+export function mockPublicView(work: Work): Work {
+  return {
+    id: work.id,
+    authorId: work.authorId,
+    mediaType: work.mediaType,
+    mediaUrl: work.mediaUrl,
+    posterUrl: work.posterUrl,
+    durationMs: work.durationMs,
+    width: work.width,
+    height: work.height,
+    title: work.title,
+    excerpt: work.excerpt,
+    topicIds: work.topicIds,
+    publishedAt: work.publishedAt,
+    aiGenerated: work.aiGenerated,
+    fromCard: work.fromCard,
+    sourceType: work.sourceType ?? (work.fromCard ? 'memory_card' : 'user_upload'),
+    body: work.body,
+    createdAt: work.createdAt,
+  }
+}
+
+export const ANON_PLAZA_BATCH = 30
+export const ANON_PLAZA_TTL_MS = 2 * 60 * 60 * 1000
+
+export interface PlazaAnonBatch {
+  ids: string[]
+  startedAt: number
+}
+
+/** 匿名两小时一批；绑定后不限。批次内被拿掉的作品直接隐去，不补新的。 */
+export function mockPlazaWorks(
+  state: WorksMockState,
+  guest: boolean,
+  batch: PlazaAnonBatch | undefined,
+  now: number,
+): { items: Work[]; batch?: PlazaAnonBatch } {
+  const publicItems = mockFeed(state)
+  if (!guest) return { items: publicItems }
+  if (batch && now - batch.startedAt < ANON_PLAZA_TTL_MS) {
+    const byId = new Map(publicItems.map((work) => [work.id, work]))
+    return {
+      items: batch.ids.flatMap((id) => {
+        const found = byId.get(id)
+        return found ? [found] : []
+      }),
+      batch,
+    }
+  }
+  const items = publicItems.slice(0, ANON_PLAZA_BATCH)
+  return { items, batch: { ids: items.map((work) => work.id), startedAt: now } }
 }
 
 /** 个人作品页。自己看自己时连草稿与审核中一起给。 */
