@@ -511,8 +511,8 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
           <h2>允许把本次上传和你选择的场景，用于生成{snapshot.petName}的这扇私人窗口</h2>
           <p>授权仅针对这次建档用途。你可以在确认窗口前撤回；不同意时不会建立窗口。</p>
         </div>
-        <button className="pob-primary" disabled={busy} onClick={() => void run((current) => onboardingApi.setConsent(current.snapshot.onboardingId, true, current.snapshot.sessionVersion))}>同意并查看最终确认</button>
-        <button className="pob-link" disabled={busy} onClick={() => void run((current) => onboardingApi.setConsent(current.snapshot.onboardingId, false, current.snapshot.sessionVersion))}>暂不同意</button>
+        <button className="pob-primary" disabled={busy || !canPerform(snapshot, 'set_consent')} onClick={() => void run((current) => onboardingApi.setConsent(current.snapshot.onboardingId, true, current.snapshot.sessionVersion))}>同意并查看最终确认</button>
+        <button className="pob-link" disabled={busy || !canPerform(snapshot, 'set_consent')} onClick={() => void run((current) => onboardingApi.setConsent(current.snapshot.onboardingId, false, current.snapshot.sessionVersion))}>暂不同意</button>
       </section>,
       '最后确认一次使用方式',
     )

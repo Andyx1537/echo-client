@@ -56,6 +56,11 @@ describe('onboarding flow', () => {
     expect(canPerform({ ...ready, allowedActions: ['abandon'] }, 'refine')).toBe(false)
     expect(isOnboardingImageFile({ type: 'image/jpeg' })).toBe(true)
     expect(isOnboardingImageFile({ type: 'video/mp4' })).toBe(false)
+    const consenting: OnboardingSnapshot = {
+      ...ready, selectedCandidateId: 'c-1', allowedActions: ['select_candidate', 'refine', 'set_consent', 'abandon'],
+    }
+    expect(canPerform(consenting, 'set_consent')).toBe(true)
+    expect(canPerform({ ...consenting, allowedActions: ['abandon'] }, 'set_consent')).toBe(false)
   })
 
   it('keeps failed asynchronous work recoverable without inventing a failure page state', () => {

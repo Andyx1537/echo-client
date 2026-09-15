@@ -32,6 +32,7 @@ export type OnboardingAction =
   | 'generate'
   | 'select_candidate'
   | 'refine'
+  | 'set_consent'
   | 'confirm'
   | 'abandon'
 

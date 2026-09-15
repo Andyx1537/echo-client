@@ -55,8 +55,14 @@ function allowed(detail: MockSession): OnboardingSnapshot['allowedActions'] {
   if (status === 'collecting') actions.push('upload_asset', 'select_subject', 'save_answer')
   if (status === 'ready_to_bind') actions.push('bind_phone', 'save_answer')
   if (status === 'ready_to_generate') actions.push('generate', 'save_answer')
-  if (status === 'candidate_ready') actions.push('select_candidate', 'refine')
-  if (status === 'ready_to_confirm') actions.push('refine', 'confirm')
+  if (status === 'candidate_ready') {
+    actions.push('select_candidate', 'refine')
+    if (detail.snapshot.selectedCandidateId) actions.push('set_consent')
+  }
+  if (status === 'ready_to_confirm') {
+    actions.push('refine', 'set_consent')
+    if (detail.memoryUseConsent.granted) actions.push('confirm')
+  }
   return actions
 }
 
