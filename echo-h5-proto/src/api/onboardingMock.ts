@@ -185,20 +185,20 @@ export const mockOnboardingApi: OnboardingApi = {
     const store = readStore()
     const detail = getMutable(store, onboardingId)
     assertVersion(detail, version)
-    const mediaType = file.type.startsWith('video/') ? 'video' : 'image'
-    const assetId = id('asset')
-    detail.assets.push({ assetId, url: await fileUrl(file), mediaType, name: file.name })
-    if (mediaType === 'image') {
-      const multiple = /multi|多只/i.test(file.name)
-      const candidates: SubjectCandidate[] = multiple
-        ? [
-            { subjectId: `${assetId}-left`, label: '左边这只', modelType: 'animal', boundingBox: { x: 0.08, y: 0.16, w: 0.4, h: 0.7 } },
-            { subjectId: `${assetId}-right`, label: '右边这只', modelType: 'animal', boundingBox: { x: 0.52, y: 0.16, w: 0.4, h: 0.7 } },
-          ]
-        : [{ subjectId: `${assetId}-pet`, label: '这只宠物', modelType: 'animal', boundingBox: { x: 0.15, y: 0.1, w: 0.7, h: 0.8 } }]
-      detail.subjectCandidates = candidates
-      detail.snapshot.currentStep = 'subject_select'
+    if (!file.type.startsWith('image/')) {
+      throw new OnboardingApiError('asset_video_not_accepted', '建档这一步只收照片，视频先不用传。')
     }
+    const assetId = id('asset')
+    detail.assets.push({ assetId, url: await fileUrl(file), mediaType: 'image', name: file.name })
+    const multiple = /multi|多只/i.test(file.name)
+    const candidates: SubjectCandidate[] = multiple
+      ? [
+          { subjectId: `${assetId}-left`, label: '左边这只', modelType: 'animal', boundingBox: { x: 0.08, y: 0.16, w: 0.4, h: 0.7 } },
+          { subjectId: `${assetId}-right`, label: '右边这只', modelType: 'animal', boundingBox: { x: 0.52, y: 0.16, w: 0.4, h: 0.7 } },
+        ]
+      : [{ subjectId: `${assetId}-pet`, label: '这只宠物', modelType: 'animal', boundingBox: { x: 0.15, y: 0.1, w: 0.7, h: 0.8 } }]
+    detail.subjectCandidates = candidates
+    detail.snapshot.currentStep = 'subject_select'
     touch(detail)
     writeStore(store)
     return clone(detail)

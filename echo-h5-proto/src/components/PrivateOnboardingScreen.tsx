@@ -16,6 +16,7 @@ import {
   canPerform,
   deriveOnboardingView,
   firstMissingQuestion,
+  isOnboardingImageFile,
   questionById,
   pollGenerationProgress,
   recoverableMessage,
@@ -215,6 +216,10 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
 
   async function upload(file: File | undefined): Promise<void> {
     if (!file) return
+    if (!isOnboardingImageFile(file)) {
+      setError('建档这一步只收照片，视频先不用传。')
+      return
+    }
     if (localPreview) URL.revokeObjectURL(localPreview)
     setLocalPreview(URL.createObjectURL(file))
     await run((current) => onboardingApi.upload(current.snapshot.onboardingId, file, current.snapshot.sessionVersion))
@@ -317,10 +322,10 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
       <section className="pob-panel">
         <p className="pob-lead">先从一张能看清它的照片开始。照片里有多只也没关系，下一步会让你只选一只。</p>
         <label className={`pob-drop ${busy ? 'is-busy' : ''}`}>
-          <input type="file" accept="image/*,video/*" disabled={busy} onChange={(event) => void upload(event.target.files?.[0])} />
+          <input type="file" accept="image/*" disabled={busy || !canPerform(snapshot, 'upload_asset')} onChange={(event) => void upload(event.target.files?.[0])} />
           <span className="pob-drop-plus">＋</span>
-          <strong>{busy ? '正在安全保存…' : '上传照片或视频'}</strong>
-          <small>首张清晰照片是必需的；视频可以稍后再补</small>
+          <strong>{busy ? '正在安全保存…' : '上传一张照片'}</strong>
+          <small>首张清晰照片是必需的</small>
         </label>
         <button className="pob-link" onClick={onSkip}>暂时离开，保留这次进度</button>
       </section>,
@@ -357,10 +362,10 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
             <label>裁切高度<input type="range" min="0.2" max={1 - crop.y} step="0.01" value={crop.h} onChange={(event) => updateCrop('h', Number(event.target.value))} /></label>
           </div>
         )}
-        <button className="pob-primary" disabled={busy || !pickedSubject} onClick={() => void confirmSubject()}>
+        <button className="pob-primary" disabled={busy || !pickedSubject || !canPerform(snapshot, 'select_subject')} onClick={() => void confirmSubject()}>
           {busy ? '正在检查辨识度…' : '就是这一只，继续'}
         </button>
-        <label className="pob-link pob-replace">换一份素材<input type="file" accept="image/*" disabled={busy} onChange={(event) => void upload(event.target.files?.[0])} /></label>
+        <label className="pob-link pob-replace">换一份素材<input type="file" accept="image/*" disabled={busy || !canPerform(snapshot, 'upload_asset')} onChange={(event) => void upload(event.target.files?.[0])} /></label>
       </section>,
       candidates.length > 1 ? '请明确选定一只' : '确认是它，再裁切清楚',
     )
@@ -400,7 +405,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
         {id === 'q3' && codes.includes('special_gesture') && (
           <label className="pob-free-text">愿意的话，留一句它的小动作<input value={freeText} maxLength={120} onChange={(event) => setFreeText(event.target.value)} /></label>
         )}
-        <button className="pob-primary" disabled={busy || !codes.length} onClick={() => void saveQuestion(id)}>
+        <button className="pob-primary" disabled={busy || !codes.length || !canPerform(snapshot, 'save_answer')} onClick={() => void saveQuestion(id)}>
           {busy ? '正在保存…' : editingQuestion && answerMap.has(id) ? '保存修改' : id === 'q4' ? '看看我们记下了什么' : '继续'}
         </button>
         {editingQuestion && !firstMissing && <button className="pob-link" onClick={() => setEditingQuestion(null)}>不修改，返回总结</button>}
@@ -448,7 +453,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
       <section className="pob-panel">
         <p className="pob-lead">这些资料已经暂存。现在绑定手机号，是为了下次换设备或退出后还能找回来。</p>
         {summary}
-        <button className="pob-primary" disabled={busy} onClick={() => void resolveIdentity()}>{busy ? '正在确认…' : '手机号登录并继续'}</button>
+        <button className="pob-primary" disabled={busy || !canPerform(snapshot, 'bind_phone')} onClick={() => void resolveIdentity()}>{busy ? '正在确认…' : '手机号登录并继续'}</button>
       </section>,
       '生成前，把这份资料安全收好',
     )
@@ -488,8 +493,8 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
             <article key={candidate.candidateId}>
               <div className="pob-candidate-art" style={candidateStyle(candidate)}>{candidate.imageUrl ? null : <span>{candidate.emoji || '🐾'}</span>}</div>
               <p>{candidate.signature || '从熟悉的日常里轻轻长出来'}</p>
-              <button disabled={busy} onClick={() => void run((current) => onboardingApi.selectCandidate(current.snapshot.onboardingId, candidate.candidateId, current.snapshot.sessionVersion))}>这幅最像</button>
-              <button className="pob-link" disabled={busy} onClick={() => void run((current) => onboardingApi.refine(current.snapshot.onboardingId, candidate.candidateId, 'closer_to_subject', current.snapshot.sessionVersion))}>基于这幅再靠近一点</button>
+              <button disabled={busy || !canPerform(snapshot, 'select_candidate')} onClick={() => void run((current) => onboardingApi.selectCandidate(current.snapshot.onboardingId, candidate.candidateId, current.snapshot.sessionVersion))}>这幅最像</button>
+              <button className="pob-link" disabled={busy || !canPerform(snapshot, 'refine')} onClick={() => void run((current) => onboardingApi.refine(current.snapshot.onboardingId, candidate.candidateId, 'closer_to_subject', current.snapshot.sessionVersion))}>基于这幅再靠近一点</button>
             </article>
           ))}
         </div>
@@ -523,7 +528,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
         <button className="pob-primary" disabled={busy || !selected || !canPerform(snapshot, 'confirm')} onClick={() => selected && void run((current) => onboardingApi.confirm(current.snapshot.onboardingId, selected.candidateId, current.memoryUseConsent.consentVersion, current.snapshot.sessionVersion)).then((next) => next?.petId && onComplete(next.petId))}>
           {busy ? '正在安全确认…' : '就是它，建立窗口'}
         </button>
-        <button className="pob-link" disabled={busy} onClick={() => selected && void run((current) => onboardingApi.refine(current.snapshot.onboardingId, selected.candidateId, 'change_scene', current.snapshot.sessionVersion))}>换一种画面再看看</button>
+        <button className="pob-link" disabled={busy || !selected || !canPerform(snapshot, 'refine')} onClick={() => selected && void run((current) => onboardingApi.refine(current.snapshot.onboardingId, selected.candidateId, 'change_scene', current.snapshot.sessionVersion))}>换一种画面再看看</button>
       </section>,
       `为${snapshot.petName}建立这扇窗`,
     )

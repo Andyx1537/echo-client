@@ -98,6 +98,10 @@ export function canPerform(snapshot: OnboardingSnapshot, action: OnboardingSnaps
   return snapshot.allowedActions.includes(action)
 }
 
+export function isOnboardingImageFile(file: Pick<File, 'type'>): boolean {
+  return file.type.startsWith('image/')
+}
+
 export function answerCountIsValid(questionId: QuestionId, codes: string[]): boolean {
   if (questionId === 'q1') return codes.length === 1
   if (questionId === 'q4') return codes.length >= 1 && codes.length <= 2

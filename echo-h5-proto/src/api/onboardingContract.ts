@@ -321,9 +321,12 @@ export const httpOnboardingApi: OnboardingApi = {
   updateProfile: (id, petName, expectedSessionVersion) =>
     mutate(id, `profile:${id}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}/profile`, json('PATCH', { petName, expectedSessionVersion })),
   upload: async (id, file, expectedSessionVersion) => {
+    if (!file.type.startsWith('image/')) {
+      throw new OnboardingApiError('asset_video_not_accepted', '建档这一步只收照片，视频先不用传。')
+    }
     const form = new FormData()
     form.append('file', file)
-    form.append('mediaType', file.type.startsWith('video/') ? 'video' : 'image')
+    form.append('mediaType', 'image')
     form.append('expectedSessionVersion', String(expectedSessionVersion))
     return mutate(id, `upload:${id}:${expectedSessionVersion}`, `/pet/onboarding/${encodeURIComponent(id)}/assets`, { method: 'POST', body: form })
   },

@@ -92,6 +92,14 @@ describe('Onboarding v1 HTTP consumer contract', () => {
     expect(restored.snapshot.status).toBe('generating')
   })
 
+  it('rejects video uploads before calling the server', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(httpOnboardingApi.upload('ob-1', new File(['x'], 'a.mp4', { type: 'video/mp4' }), 2))
+      .rejects.toMatchObject({ code: 'asset_video_not_accepted' })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('branches on stable error detail instead of translated HTTP copy', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ currentStateVersion: 8, currentSnapshot: snapshot }, false)))
     await expect(httpOnboardingApi.updateProfile('ob-1', '麦麦', 2)).rejects.toMatchObject({

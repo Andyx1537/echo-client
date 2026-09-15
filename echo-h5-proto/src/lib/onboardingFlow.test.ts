@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { OnboardingDetail, OnboardingSnapshot } from '../api/onboardingContract'
-import { ONBOARDING_QUESTIONS, answerCountIsValid, deriveOnboardingView, firstMissingQuestion, pollGenerationProgress, recoverableMessage, restoreOrRestartOnboarding, shouldResumePrivateOnboarding } from './onboardingFlow'
+import { ONBOARDING_QUESTIONS, answerCountIsValid, canPerform, deriveOnboardingView, firstMissingQuestion, isOnboardingImageFile, pollGenerationProgress, recoverableMessage, restoreOrRestartOnboarding, shouldResumePrivateOnboarding } from './onboardingFlow'
 
 const snapshot: OnboardingSnapshot = {
   onboardingId: 'ob-1', accountId: 'acc-1', petName: '它', status: 'collecting', currentStep: 'questionnaire',
@@ -44,6 +44,18 @@ describe('onboarding flow', () => {
     expect(new Set(codes).size).toBe(codes.length)
     expect(codes).toContain('q3:special_gesture')
     expect(codes).toContain('q4:ordinary_routine')
+  })
+
+  it('keeps candidate and refine behind server allowedActions, and only accepts photos', () => {
+    const ready: OnboardingSnapshot = {
+      ...snapshot, status: 'candidate_ready', allowedActions: ['select_candidate', 'refine', 'abandon'],
+    }
+    expect(canPerform(ready, 'select_candidate')).toBe(true)
+    expect(canPerform(ready, 'refine')).toBe(true)
+    expect(canPerform({ ...ready, allowedActions: ['abandon'] }, 'select_candidate')).toBe(false)
+    expect(canPerform({ ...ready, allowedActions: ['abandon'] }, 'refine')).toBe(false)
+    expect(isOnboardingImageFile({ type: 'image/jpeg' })).toBe(true)
+    expect(isOnboardingImageFile({ type: 'video/mp4' })).toBe(false)
   })
 
   it('keeps failed asynchronous work recoverable without inventing a failure page state', () => {
