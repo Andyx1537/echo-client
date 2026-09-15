@@ -1,26 +1,65 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
+import { isFavoritesAuthRequired } from '../lib/favoritesAuth'
 import type { Work } from '../types'
+import { usePhoneLogin } from './PhoneLoginCoordinator'
 
 interface Props {
+  guest?: boolean
   onBack: () => void
   onOpenWork: (workId: string) => void
+  onIdentityChanged?: () => void
 }
 
-export default function FavoritesScreen({ onBack, onOpenWork }: Props) {
+export default function FavoritesScreen({ guest = false, onBack, onOpenWork, onIdentityChanged }: Props) {
   const [items, setItems] = useState<Work[] | null>(null)
+  const [needBind, setNeedBind] = useState(guest)
+  const { login } = usePhoneLogin()
+
+  function applyFavoritesResult(pageItems: Work[]) {
+    setNeedBind(false)
+    setItems(pageItems)
+  }
+
+  function applyFavoritesError(error: unknown) {
+    if (isFavoritesAuthRequired(error)) {
+      setNeedBind(true)
+      setItems([])
+      return
+    }
+    setNeedBind(false)
+    setItems([])
+  }
+
+  async function load() {
+    try {
+      applyFavoritesResult((await api.myFavorites()).items)
+    } catch (error) {
+      applyFavoritesError(error)
+    }
+  }
 
   useEffect(() => {
     let alive = true
+    if (guest) setNeedBind(true)
     api.myFavorites().then((page) => {
-      if (alive) setItems(page.items)
-    }).catch(() => {
-      if (alive) setItems([])
+      if (!alive) return
+      applyFavoritesResult(page.items)
+    }).catch((error) => {
+      if (!alive) return
+      applyFavoritesError(error)
     })
     return () => {
       alive = false
     }
-  }, [])
+  }, [guest])
+
+  async function bindAndReload() {
+    const outcome = await login({ intent: 'none' })
+    if (!outcome) return
+    onIdentityChanged?.()
+    await load()
+  }
 
   return (
     <div className="works">
@@ -32,7 +71,13 @@ export default function FavoritesScreen({ onBack, onOpenWork }: Props) {
           我的收藏
         </span>
       </div>
-      {items === null ? (
+      {needBind ? (
+        <div className="works-empty">
+          <p className="works-empty-title">收藏只进自己的那一叠</p>
+          <p className="works-empty-sub">绑定之后就能看见。现在这一页还不属于游客。</p>
+          <button className="pub-submit" onClick={() => void bindAndReload()}>绑定手机号</button>
+        </div>
+      ) : items === null ? (
         <p className="plaza-loading">正在把收藏轻轻取出来…</p>
       ) : items.length === 0 ? (
         <div className="works-empty">

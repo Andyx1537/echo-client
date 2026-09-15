@@ -366,8 +366,10 @@ export default function App() {
     if (favoritesOpen) {
       return (
         <FavoritesScreen
+          guest={Boolean(me?.isGuest)}
           onBack={() => setFavoritesOpen(false)}
           onOpenWork={(id) => setOpenWorkId(id)}
+          onIdentityChanged={() => { void refreshMe() }}
         />
       )
     }
