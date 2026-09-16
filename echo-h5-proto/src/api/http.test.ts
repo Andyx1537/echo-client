@@ -249,6 +249,35 @@ describe('http 驳回重提', () => {
   })
 })
 
+describe('http 作品申诉', () => {
+  it('workModeration / appealWork 走同一条 workId', async () => {
+    const readFn = mockFetchOnce({
+      workId: 'wk-1',
+      status: 'rejected',
+      reasonCode: 'policy',
+      reasonText: '这一条我们看过了，暂时还不能公开。你可以改一改再试试。',
+      appealable: true,
+      appealUsed: false,
+      appeal: null,
+      reviewedAt: 1,
+      handledAt: 2,
+    })
+    const info = await httpBackend.workModeration('wk-1')
+    expect(readFn.mock.calls[0][0]).toContain('/works/wk-1/moderation')
+    expect(info.appealable).toBe(true)
+
+    const appealFn = mockFetchOnce({
+      appealId: 'mod-1',
+      state: 'appealing',
+      createdAt: 3,
+    })
+    const appealed = await httpBackend.appealWork('wk-1', '请再看一眼')
+    expect(appealFn.mock.calls[0][0]).toContain('/works/wk-1/appeal')
+    expect(JSON.parse(String(appealFn.mock.calls[0][1].body))).toEqual({ text: '请再看一眼' })
+    expect(appealed.state).toBe('appealing')
+  })
+})
+
 describe('http 作品投稿名额', () => {
   it('userWorks() 原样读 submissionCapability，不从 items 推算', async () => {
     mockFetchOnce({

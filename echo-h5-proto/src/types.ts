@@ -825,6 +825,34 @@ export interface ResubmitWorkResult {
   moderationId: string
 }
 
+/** GET /works/:workId/moderation。appealable 只信服务端，不由列表 status 推。 */
+export interface WorkModeration {
+  workId: string
+  status: WorkStatus
+  reasonCode: string | null
+  reasonText: string | null
+  appealable: boolean
+  appealUsed: boolean
+  appeal: WorkAppealBlock | null
+  reviewedAt: number | null
+  handledAt: number | null
+}
+
+export interface WorkAppealBlock {
+  used?: boolean
+  appealId?: string
+  text?: string
+  appealAt?: number
+  result?: string | null
+  handledAt?: number | null
+}
+
+export interface AppealWorkResult {
+  appealId: string
+  state: WorkStatus
+  createdAt: number
+}
+
 export type BehaviorPurpose = 'ui_adaptation' | 'public_recommendation' | 'private_generation'
 
 export interface BehaviorEventInput {

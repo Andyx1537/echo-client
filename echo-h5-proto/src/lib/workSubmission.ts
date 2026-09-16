@@ -18,6 +18,21 @@ export function reviseActionCopy(work?: Work | null): string | null {
   return work?.nextAction === 'resubmit' ? '改好了，再提一次' : '改一改再提'
 }
 
+/** 列表上「看看为什么」：驳回或下架才露。能不能申要等 moderation 回执。 */
+export function canSeeModeration(work?: Work | null): boolean {
+  return work?.status === 'rejected' || work?.status === 'takendown'
+}
+
+export function moderationEntryCopy(work?: Work | null): string | null {
+  if (!canSeeModeration(work)) return null
+  return '看看为什么'
+}
+
+export function appealingHintCopy(work?: Work | null): string | null {
+  if (work?.status !== 'appealing') return null
+  return '我们正在看你这次说的话。'
+}
+
 export function publishDoneTitle(reviewMode?: string | null): string {
   return reviewMode === 'reused' ? '已经在广场上了' : '已提交'
 }

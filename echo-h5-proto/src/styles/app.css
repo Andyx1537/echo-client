@@ -2341,7 +2341,7 @@
 
 /* ================= 作品瀑布 ================= */
 
-.works { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--cream); }
+.works { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--cream); position: relative; }
 .works-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 52px 18px 12px;
@@ -2363,7 +2363,12 @@
   overflow: hidden; box-shadow: var(--shadow-card);
   transition: transform .18s ease;
 }
-.wk-card:active { transform: scale(.985); }
+button.wk-card:active,
+.wk-card-hit:active { transform: scale(.985); }
+.wk-card-hit {
+  display: block; width: 100%; text-align: left;
+  background: transparent; color: inherit;
+}
 /* padding-top 由 JS 按真实宽高算，所以这里不写死比例 */
 .wk-cover { position: relative; width: 100%; background: #e9ddc6; }
 .wk-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -2389,6 +2394,33 @@
 .wk-excerpt {
   margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.55;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.wk-why {
+  display: block; width: 100%;
+  padding: 0 11px 12px; text-align: left;
+  background: transparent;
+  font-size: 12.5px; font-weight: 600; color: var(--amber-deep);
+}
+
+.wk-moderation-overlay {
+  position: absolute; inset: 0;
+  background: var(--cream);
+  z-index: 4;
+  overflow: auto;
+}
+.wk-moderation { min-height: 100%; }
+.wk-moderation-body {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 8px 18px 28px;
+}
+.wk-moderation-reason {
+  margin: 0; font-size: 15px; color: var(--ink); line-height: 1.7;
+}
+.wk-moderation-used {
+  margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.7;
+}
+.wk-moderation-error {
+  margin: 0; font-size: 13px; color: var(--amber-deep);
 }
 
 .works-more {
