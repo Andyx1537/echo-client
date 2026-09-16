@@ -28,6 +28,7 @@ export type OnboardingAction =
   | 'upload_asset'
   | 'select_subject'
   | 'save_answer'
+  | 'update_profile'
   | 'bind_phone'
   | 'generate'
   | 'select_candidate'

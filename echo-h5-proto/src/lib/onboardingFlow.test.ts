@@ -61,6 +61,8 @@ describe('onboarding flow', () => {
     }
     expect(canPerform(consenting, 'set_consent')).toBe(true)
     expect(canPerform({ ...consenting, allowedActions: ['abandon'] }, 'set_consent')).toBe(false)
+    expect(canPerform({ ...snapshot, allowedActions: ['update_profile', 'save_answer'] }, 'update_profile')).toBe(true)
+    expect(canPerform(ready, 'update_profile')).toBe(false)
   })
 
   it('keeps failed asynchronous work recoverable without inventing a failure page state', () => {

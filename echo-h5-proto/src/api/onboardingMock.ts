@@ -52,9 +52,9 @@ function allowed(detail: MockSession): OnboardingSnapshot['allowedActions'] {
   const status = detail.snapshot.status
   if (status === 'confirmed' || status === 'abandoned') return []
   const actions: OnboardingSnapshot['allowedActions'] = ['abandon']
-  if (status === 'collecting') actions.push('upload_asset', 'select_subject', 'save_answer')
-  if (status === 'ready_to_bind') actions.push('bind_phone', 'save_answer')
-  if (status === 'ready_to_generate') actions.push('generate', 'save_answer')
+  if (status === 'collecting') actions.push('upload_asset', 'select_subject', 'save_answer', 'update_profile')
+  if (status === 'ready_to_bind') actions.push('bind_phone', 'save_answer', 'update_profile')
+  if (status === 'ready_to_generate') actions.push('generate', 'save_answer', 'update_profile')
   if (status === 'candidate_ready') {
     actions.push('select_candidate', 'refine')
     if (detail.snapshot.selectedCandidateId) actions.push('set_consent')
@@ -149,7 +149,7 @@ export const mockOnboardingApi: OnboardingApi = {
       currentStep: 'upload',
       sessionVersion: 1,
       lastOperation: 'none',
-      allowedActions: ['upload_asset', 'select_subject', 'save_answer', 'abandon'],
+      allowedActions: ['upload_asset', 'select_subject', 'save_answer', 'update_profile', 'abandon'],
       selectedSubjectId: null,
       selectedCandidateId: null,
       generationJob: null,

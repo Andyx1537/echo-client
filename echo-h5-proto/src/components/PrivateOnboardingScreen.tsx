@@ -381,7 +381,7 @@ export default function PrivateOnboardingScreen({ onComplete, onSkip, onIdentity
         {id === 'q1' && (
           <div className="pob-name-row">
             <label htmlFor="pet-name">平时怎么称呼它？</label>
-            <div><input id="pet-name" value={petName} maxLength={64} placeholder="可以先用“它”" onChange={(event) => setPetName(event.target.value)} /><button disabled={busy} onClick={() => void saveName()}>保存</button></div>
+            <div><input id="pet-name" value={petName} maxLength={64} placeholder="可以先用“它”" onChange={(event) => setPetName(event.target.value)} /><button disabled={busy || !canPerform(snapshot, 'update_profile')} onClick={() => void saveName()}>保存</button></div>
           </div>
         )}
         <p className="pob-question-count">{ONBOARDING_QUESTIONS.findIndex((item) => item.id === id) + 1} / 4</p>
