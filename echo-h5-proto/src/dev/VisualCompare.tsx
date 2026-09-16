@@ -219,6 +219,7 @@ function PlazaTapImmersive() {
           onBack={() => {}}
           onChange={() => {}}
           onOpenComments={() => {}}
+          onOpenAuthor={() => {}}
         />
       </PhoneFrame>
     </div>

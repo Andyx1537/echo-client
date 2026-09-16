@@ -1,10 +1,7 @@
 import { useRef, type TouchEvent } from 'react'
 import type { Work } from '../types'
 import AiGeneratedBadge from './AiGeneratedBadge'
-import { isWorkFeedNavigable, localNextWork, localPrevWork } from '../lib/workFeed'
-
-const SWIPE_MIN = 56
-const SWIPE_AXIS = 1.2
+import { isWorkFeedNavigable, localNextWork, localPrevWork, workImmersiveSwipe } from '../lib/workFeed'
 
 interface Props {
   work: Work
@@ -12,10 +9,18 @@ interface Props {
   onBack: () => void
   onChange: (work: Work) => void
   onOpenComments: (work: Work) => void
+  onOpenAuthor: (work: Work) => void
 }
 
-/** 广场点进去的全屏单卡。上下翻沿用进入时那份列表，不另起推荐。 */
-export default function WorkImmersiveScreen({ work, items, onBack, onChange, onOpenComments }: Props) {
+/** 广场点进去的全屏单卡。上下翻沿用进入时那份列表；左滑进作者主页。 */
+export default function WorkImmersiveScreen({
+  work,
+  items,
+  onBack,
+  onChange,
+  onOpenComments,
+  onOpenAuthor,
+}: Props) {
   const feed = { items }
   const index = items.findIndex((item) => item.id === work.id)
   const prev = localPrevWork(feed, index)
@@ -34,15 +39,11 @@ export default function WorkImmersiveScreen({ work, items, onBack, onChange, onO
     start.current = null
     if (!from) return
     const t = e.changedTouches[0]
-    const dx = t.clientX - from.x
-    const dy = t.clientY - from.y
-    if (dx > SWIPE_MIN && Math.abs(dx) > Math.abs(dy) * SWIPE_AXIS) {
-      onBack()
-      return
-    }
-    if (!navigable || Math.abs(dy) < SWIPE_MIN || Math.abs(dy) < Math.abs(dx) * SWIPE_AXIS) return
-    if (dy < 0 && next) onChange(next)
-    if (dy > 0 && prev) onChange(prev)
+    const gesture = workImmersiveSwipe(t.clientX - from.x, t.clientY - from.y, navigable)
+    if (gesture === 'back') onBack()
+    if (gesture === 'author') onOpenAuthor(work)
+    if (gesture === 'next' && next) onChange(next)
+    if (gesture === 'prev' && prev) onChange(prev)
   }
 
   return (
@@ -75,9 +76,14 @@ export default function WorkImmersiveScreen({ work, items, onBack, onChange, onO
       <div className="wk-immersive-copy">
         {work.title && <h1>{work.title}</h1>}
         {work.excerpt && <p>{work.excerpt}</p>}
-        <button type="button" className="wk-immersive-talk" onClick={() => onOpenComments(work)}>
-          想说的话
-        </button>
+        <div className="wk-immersive-actions">
+          <button type="button" className="wk-immersive-talk" onClick={() => onOpenComments(work)}>
+            想说的话
+          </button>
+          <button type="button" className="wk-immersive-home" onClick={() => onOpenAuthor(work)}>
+            主页
+          </button>
+        </div>
       </div>
     </div>
   )
