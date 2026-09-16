@@ -131,8 +131,16 @@ const ARRIVAL_PAGE_SIZE = 20
  */
 const catalog = contentForDisplay(plazaWindows)
 
-/** 可被搜到的账号 = 官方号（真实账号，恒在）+ 测试账号（受总闸控制） */
-const searchableAccounts = [opsAccount, ...accountsForDisplay(seedAuthorPool)]
+/** 广场作品作者。左滑进主页要用同一批 id，不能只存在 worksMock 里。 */
+const workAuthors = [
+  { id: 'acc_lin', nickname: '林', avatar: 'linear-gradient(135deg,#f3d9b8,#e7b98f)', persona: '把下午的阳光也收起来的人', isSeed: true as const },
+  { id: 'acc_zhou', nickname: '阿周', avatar: 'linear-gradient(135deg,#cfe0c2,#9cb27e)', persona: '杯子缺了口也还在用的人', isSeed: true as const },
+  { id: 'acc_mu', nickname: '木', avatar: 'linear-gradient(135deg,#e6c6a2,#c99a70)', persona: '推门那一下总是先到的人', isSeed: true as const },
+  { id: 'acc_he', nickname: '何', avatar: 'linear-gradient(135deg,#e6c5b6,#c98e7b)', persona: '门框上的线不再往上画的人', isSeed: true as const },
+]
+
+/** 可被搜到的账号 = 官方号（真实账号，恒在）+ 测试账号（受总闸控制）+ 广场作品作者 */
+const searchableAccounts = [opsAccount, ...accountsForDisplay(seedAuthorPool), ...accountsForDisplay(workAuthors)]
 
 /**
  * 款式商店：只卖皮肤/边框/材质（装扮·增值），与后端 shopSkins 同形（契约 §7 / 定案 D2）。

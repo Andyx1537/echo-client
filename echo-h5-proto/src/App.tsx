@@ -365,6 +365,52 @@ export default function App() {
         />
       )
     }
+    if (open) {
+      const index = indexOf(feed, open.cardId ?? null)
+      return (
+        // key=窗口键：每换一条都重挂详情页，献花额度/记得状态/明信片一律跟着当前这条重取，不串台
+        <DetailScreen
+          key={open.cardId ?? open.petId}
+          petId={open.petId}
+          cardId={open.cardId}
+          onBack={closeWindow}
+          onOpenUser={handleOpenUser}
+          onBuildOwn={() => {
+            closeWindow()
+            if (pet) setTab('mine')
+            else setPhase('onboarding')
+          }}
+          // 只有「顺着一条流进来」的入口才挂上下翻；
+          // 搜索/消息/我的它这类单条上下文不挂，避免从别处进来却串进广场流
+          feed={
+            isFeedNavigable(feed) && index >= 0
+              ? {
+                  hasPrev: hasPrev(feed, index),
+                  hasNext: hasNext(feed, index),
+                  loadingMore: feedLoading,
+                  onPrev: goPrevWindow,
+                  onNext: () => void goNextWindow(),
+                }
+              : undefined
+          }
+        />
+      )
+    }
+    // 主页盖在全屏卡之上：返回只关主页，必须回到进来的那张卡（D24 ④）
+    if (profileUserId) {
+      return (
+        <UserProfileScreen
+          key={profileUserId}
+          userId={profileUserId}
+          onBack={() => setProfileUserId(null)}
+          // nextCursor 不带出去：续拉走的是 GET /plaza，拿主页的游标去续会串成广场流。
+          // 只把这份作品墙已加载的顺序交给详情页，翻到底就是温柔收尾。
+          onOpenWindow={(card, cards) =>
+            openWindow(card, { cards, nextCursor: null, category: null })
+          }
+        />
+      )
+    }
     if (immersive) {
       const work = immersive.items.find((item) => item.id === immersive.workId)
       if (work) {
@@ -375,6 +421,7 @@ export default function App() {
             onBack={() => setImmersive(null)}
             onChange={(next) => setImmersive({ items: immersive.items, workId: next.id })}
             onOpenComments={(next) => setOpenWorkId(next.id)}
+            onOpenAuthor={(next) => setProfileUserId(next.authorId)}
           />
         )
       }
@@ -429,53 +476,6 @@ export default function App() {
       )
     }
 
-    if (open) {
-      const index = indexOf(feed, open.cardId ?? null)
-      return (
-        // key=窗口键：每换一条都重挂详情页，献花额度/记得状态/明信片一律跟着当前这条重取，不串台
-        <DetailScreen
-          key={open.cardId ?? open.petId}
-          petId={open.petId}
-          cardId={open.cardId}
-          onBack={closeWindow}
-          onOpenUser={handleOpenUser}
-          onBuildOwn={() => {
-            closeWindow()
-            if (pet) setTab('mine')
-            else setPhase('onboarding')
-          }}
-          // 只有「顺着一条流进来」的入口才挂上下翻；
-          // 搜索/消息/我的它这类单条上下文不挂，避免从别处进来却串进广场流
-          feed={
-            isFeedNavigable(feed) && index >= 0
-              ? {
-                  hasPrev: hasPrev(feed, index),
-                  hasNext: hasNext(feed, index),
-                  loadingMore: feedLoading,
-                  onPrev: goPrevWindow,
-                  onNext: () => void goNextWindow(),
-                }
-              : undefined
-          }
-        />
-      )
-    }
-
-    // 他人主页排在窗口详情之后：从主页点进一扇窗时详情盖在上面，返回仍回到这个人的主页
-    if (profileUserId) {
-      return (
-        <UserProfileScreen
-          key={profileUserId}
-          userId={profileUserId}
-          onBack={() => setProfileUserId(null)}
-          // nextCursor 不带出去：续拉走的是 GET /plaza，拿主页的游标去续会串成广场流。
-          // 只把这份作品墙已加载的顺序交给详情页，翻到底就是温柔收尾。
-          onOpenWindow={(card, cards) =>
-            openWindow(card, { cards, nextCursor: null, category: null })
-          }
-        />
-      )
-    }
     return null
   }
 

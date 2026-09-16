@@ -2475,10 +2475,15 @@ button.wk-card:active,
 }
 .wk-immersive-copy h1 { margin: 0 0 6px; font-size: 22px; font-weight: 700; }
 .wk-immersive-copy p { margin: 0 0 14px; font-size: 14px; line-height: 1.65; opacity: .92; }
-.wk-immersive-talk {
+.wk-immersive-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.wk-immersive-talk,
+.wk-immersive-home {
   padding: 8px 14px; border-radius: 16px;
   background: rgba(255,250,241,.9); color: var(--amber-deep);
   font-size: 13px; font-weight: 600;
+}
+.wk-immersive-home {
+  background: rgba(255,250,241,.62);
 }
 .wk-immersive-nav {
   position: absolute; z-index: 3; right: 16px;
