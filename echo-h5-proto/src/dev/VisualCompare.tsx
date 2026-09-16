@@ -52,6 +52,7 @@
 import PhoneFrame from '../components/PhoneFrame'
 import MineScreen from '../components/MineScreen'
 import WorkCard from '../components/WorkCard'
+import WorkImmersiveScreen from '../components/WorkImmersiveScreen'
 import { STRANGER_PET, UNLOCKED_POSTCARDS } from './visualCompareData'
 import DesignBoard from './design/DesignBoard'
 import { assetUrl } from '../lib/assetUrl'
@@ -124,6 +125,101 @@ function StrangerScreen({ plan, showEmpty = true }: { plan: StrangerPlan; showEm
           />
           {plan === 'B' && showEmpty && <GentleEmpty />}
         </div>
+      </PhoneFrame>
+    </div>
+  )
+}
+
+function immersiveDemoWork(): Work {
+  return {
+    id: 'wk_immersive_demo',
+    authorId: 'acc_lin',
+    mediaType: 'image',
+    mediaUrl: assetUrl('seed-covers/cover-pet-nap.jpg'),
+    posterUrl: '',
+    durationMs: 0,
+    width: 900,
+    height: 1350,
+    title: '它最后一个下午',
+    excerpt: '阳光从阳台斜进来，它就趴在那块地板上，谁叫都不动。',
+    body: '阳光从阳台斜进来，它就趴在那块地板上，谁叫都不动。',
+    topicIds: [],
+    publishedAt: Date.now() - 12 * 60_000,
+    aiGenerated: false,
+    fromCard: false,
+    status: 'public',
+  }
+}
+
+function PlazaTapDetail() {
+  const work = immersiveDemoWork()
+  return (
+    <div className="vc-page">
+      <p className="vc-label">点进去 · 现在的详情</p>
+      <PhoneFrame>
+        <div className="wk-detail">
+          <div className="works-head">
+            <span className="works-head-left">
+              <button className="back-btn small" aria-label="返回">‹</button>
+              作品
+            </span>
+            <button className="works-new">收藏</button>
+          </div>
+          <article className="wk-detail-body">
+            <div className="wk-detail-media">
+              <img src={work.mediaUrl} alt="" />
+            </div>
+            <h1 className="wk-detail-title">{work.title}</h1>
+            <p className="wk-detail-text">{work.body}</p>
+            <section className="wk-comments">
+              <h2>想说的话</h2>
+              <p className="wk-comments-count">2 条在场</p>
+              <div className="wk-composer">
+                <input readOnly placeholder="留一句给你看见的人" />
+                <button disabled>送出</button>
+              </div>
+              <div className="wk-thread">
+                <div className="wk-line">
+                  <b>林</b>
+                  <em>12 分钟前</em>
+                  <p>那块地板下午会烫手，它还是要趴那儿。</p>
+                </div>
+              </div>
+              <div className="wk-thread">
+                <div className="wk-line">
+                  <b>阿宁</b>
+                  <em>刚到</em>
+                  <p>谁叫都不动这句，我好像看见了。</p>
+                </div>
+              </div>
+            </section>
+          </article>
+        </div>
+      </PhoneFrame>
+    </div>
+  )
+}
+
+function PlazaTapImmersive() {
+  const work = immersiveDemoWork()
+  const next: Work = {
+    ...work,
+    id: 'wk_immersive_next',
+    title: '球还在沙发底下',
+    excerpt: '扫地的时候滚出来，愣了一会儿又塞回去了。',
+    mediaUrl: assetUrl('seed-covers/cover-pet-ball.jpg'),
+  }
+  return (
+    <div className="vc-page">
+      <p className="vc-label">点进去 · 全屏单卡</p>
+      <PhoneFrame>
+        <WorkImmersiveScreen
+          work={work}
+          items={[work, next]}
+          onBack={() => {}}
+          onChange={() => {}}
+          onOpenComments={() => {}}
+        />
       </PhoneFrame>
     </div>
   )
@@ -248,6 +344,15 @@ export default function VisualCompare({ params }: { params: URLSearchParams }) {
     return <StrangerScreen plan={plan === 'B' ? 'B' : 'A'} showEmpty={showEmpty} />
   }
 
+  if (which === 'work-immersive') {
+    return (
+      <div className="vc-pair">
+        <PlazaTapDetail />
+        <PlazaTapImmersive />
+      </div>
+    )
+  }
+
   if (which === 'work-appeal') {
     const plan = params.get('plan')
     if (plan === 'sheet') {
@@ -278,6 +383,7 @@ export default function VisualCompare({ params }: { params: URLSearchParams }) {
         <li><a href="?visual=stranger&plan=A">陌生人明信片墙 · A 案</a></li>
         <li><a href="?visual=stranger&plan=B">陌生人明信片墙 · B 案</a></li>
         <li><a href="?visual=stranger&plan=B&empty=0">陌生人明信片墙 · B 案（不含空态）</a></li>
+        <li><a href="?visual=work-immersive">广场点进去 · 详情 vs 全屏单卡</a></li>
         <li><a href="?visual=work-appeal">我的作品 · 未通过有没有「看看为什么」</a></li>
         <li><a href="?visual=work-appeal&plan=appealing">我的作品 · 申诉中</a></li>
         <li><a href="?visual=work-appeal&plan=sheet">看看为什么 · 可申 vs 已申</a></li>
