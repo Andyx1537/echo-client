@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SubmissionCapability, Work } from '../types'
-import { canReviseWork, canSubmitWork, publishDoneSub, publishDoneTitle, reviseActionCopy, submissionWaitCopy } from './workSubmission'
+import { canReviseWork, canSeeModeration, canSubmitWork, appealingHintCopy, moderationEntryCopy, publishDoneSub, publishDoneTitle, reviseActionCopy, submissionWaitCopy } from './workSubmission'
 
 const pending: Work = {
   id: 'wk-pending', authorId: 'me', mediaType: 'image', mediaUrl: '/a.jpg', posterUrl: '',
@@ -32,6 +32,16 @@ describe('work submission capability', () => {
     expect(canReviseWork(pending)).toBe(false)
     expect(reviseActionCopy({ ...pending, status: 'rejected', nextAction: 'edit' })).toBe('改一改再提')
     expect(reviseActionCopy({ ...pending, status: 'rejected', nextAction: 'resubmit' })).toBe('改好了，再提一次')
+  })
+
+  it('shows look-why only for rejected or taken down, never for pending', () => {
+    expect(canSeeModeration({ ...pending, status: 'rejected' })).toBe(true)
+    expect(canSeeModeration({ ...pending, status: 'takendown' })).toBe(true)
+    expect(canSeeModeration(pending)).toBe(false)
+    expect(moderationEntryCopy({ ...pending, status: 'rejected' })).toBe('看看为什么')
+    expect(moderationEntryCopy(pending)).toBeNull()
+    expect(appealingHintCopy({ ...pending, status: 'appealing' })).toContain('这次说的话')
+    expect(appealingHintCopy({ ...pending, status: 'rejected' })).toBeNull()
   })
 
   it('reused review is already on the plaza, full review still waits', () => {

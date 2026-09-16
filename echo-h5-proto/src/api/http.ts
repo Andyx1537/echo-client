@@ -30,6 +30,8 @@ import type {
   DraftWorkInput,
   PublishWorkResult,
   ResubmitWorkResult,
+  WorkModeration,
+  AppealWorkResult,
   WorkComment,
   WorkCommentsPage,
   BehaviorEventInput,
@@ -304,6 +306,10 @@ export const httpBackend: EchoBackend = {
   userWorks: (userId, cursor) =>
     get<AuthorWorksPage>(`/users/${encodeURIComponent(userId)}/works${pageQuery(cursor)}`),
   workDetail: (workId) => get<{ work: Work }>(`/works/${encodeURIComponent(workId)}`),
+  workModeration: (workId) =>
+    get<WorkModeration>(`/works/${encodeURIComponent(workId)}/moderation`),
+  appealWork: (workId, text) =>
+    post<AppealWorkResult>(`/works/${encodeURIComponent(workId)}/appeal`, { text }),
   saveWorkDraft: (workId, input: DraftWorkInput) =>
     put<{ work: Work; contentVersion: number; status: string }>(
       `/works/${encodeURIComponent(workId)}/draft`,

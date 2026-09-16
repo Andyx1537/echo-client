@@ -51,8 +51,11 @@
 
 import PhoneFrame from '../components/PhoneFrame'
 import MineScreen from '../components/MineScreen'
+import WorkCard from '../components/WorkCard'
 import { STRANGER_PET, UNLOCKED_POSTCARDS } from './visualCompareData'
 import DesignBoard from './design/DesignBoard'
+import { assetUrl } from '../lib/assetUrl'
+import type { Work } from '../types'
 import './visualCompare.css'
 
 // ============================================================
@@ -126,6 +129,99 @@ function StrangerScreen({ plan, showEmpty = true }: { plan: StrangerPlan; showEm
   )
 }
 
+function appealDemoWork(status: Work['status']): Work {
+  return {
+    id: 'wk_appeal_demo',
+    authorId: 'me',
+    mediaType: 'image',
+    mediaUrl: assetUrl('seed-covers/cover-pet-ball.jpg'),
+    posterUrl: '',
+    durationMs: 0,
+    width: 900,
+    height: 1400,
+    title: '球还在沙发底下',
+    excerpt: '扫地的时候滚出来，愣了一会儿又塞回去了。',
+    topicIds: [],
+    publishedAt: Date.now() - 140 * 60_000,
+    aiGenerated: false,
+    fromCard: true,
+    status,
+    nextAction: status === 'rejected' ? 'edit' : 'none',
+  }
+}
+
+function AppealMineWall({ plan }: { plan: 'old' | 'why' | 'appealing' }) {
+  const work = appealDemoWork(plan === 'appealing' ? 'appealing' : 'rejected')
+  const label =
+    plan === 'old'
+      ? '未通过 · 只有改一改'
+      : plan === 'why'
+        ? '未通过 · 加上看看为什么'
+        : '申诉中'
+  return (
+    <div className="vc-page">
+      <p className="vc-label">我的作品 · {label}</p>
+      <PhoneFrame>
+        <div className="works">
+          <div className="works-head">
+            <span className="works-head-left">我的作品</span>
+          </div>
+          <div className="works-scope">
+            <button>广场</button>
+            <button className="on">我的</button>
+          </div>
+          <div className="works-grid">
+            <div className="works-col">
+              <WorkCard
+                work={work}
+                self
+                onLookWhy={plan === 'why' ? () => {} : undefined}
+              />
+            </div>
+            <div className="works-col" />
+          </div>
+        </div>
+      </PhoneFrame>
+    </div>
+  )
+}
+
+function AppealSheet({ used }: { used: boolean }) {
+  return (
+    <div className="vc-page">
+      <p className="vc-label">{used ? '已经说过一次' : '可申诉'}</p>
+      <PhoneFrame>
+        <div className="works wk-moderation">
+          <div className="works-head">
+            <span className="works-head-left">
+              <button className="back-btn small" aria-label="返回">‹</button>
+              看看为什么
+            </span>
+          </div>
+          <div className="wk-moderation-body">
+            <p className="wk-title">球还在沙发底下</p>
+            <p className="wk-moderation-reason">这一条我们看过了，暂时还不能公开。你可以改一改再试试。</p>
+            {used ? (
+              <p className="wk-moderation-used">你说过：扫地的时候它还在，我想再请你们看一眼。</p>
+            ) : (
+              <>
+                <label className="pub-field">
+                  <span className="pub-label">
+                    想再说一句
+                    <em className="pub-count">0/200</em>
+                  </span>
+                  <textarea className="pub-textarea" rows={5} readOnly placeholder="我们会再看一次。一条作品只能说这一次。" />
+                </label>
+                <button className="pub-submit" disabled>说这一次</button>
+              </>
+            )}
+          </div>
+        </div>
+      </PhoneFrame>
+    </div>
+  )
+}
+
 // ============================================================
 // 入口
 // ============================================================
@@ -152,6 +248,27 @@ export default function VisualCompare({ params }: { params: URLSearchParams }) {
     return <StrangerScreen plan={plan === 'B' ? 'B' : 'A'} showEmpty={showEmpty} />
   }
 
+  if (which === 'work-appeal') {
+    const plan = params.get('plan')
+    if (plan === 'sheet') {
+      return (
+        <div className="vc-pair">
+          <AppealSheet used={false} />
+          <AppealSheet used={true} />
+        </div>
+      )
+    }
+    if (plan === 'appealing') {
+      return <AppealMineWall plan="appealing" />
+    }
+    return (
+      <div className="vc-pair">
+        <AppealMineWall plan="old" />
+        <AppealMineWall plan="why" />
+      </div>
+    )
+  }
+
   return (
     <div className="vc-index">
       <h1>视觉选型对比页（仅开发模式）</h1>
@@ -161,6 +278,9 @@ export default function VisualCompare({ params }: { params: URLSearchParams }) {
         <li><a href="?visual=stranger&plan=A">陌生人明信片墙 · A 案</a></li>
         <li><a href="?visual=stranger&plan=B">陌生人明信片墙 · B 案</a></li>
         <li><a href="?visual=stranger&plan=B&empty=0">陌生人明信片墙 · B 案（不含空态）</a></li>
+        <li><a href="?visual=work-appeal">我的作品 · 未通过有没有「看看为什么」</a></li>
+        <li><a href="?visual=work-appeal&plan=appealing">我的作品 · 申诉中</a></li>
+        <li><a href="?visual=work-appeal&plan=sheet">看看为什么 · 可申 vs 已申</a></li>
       </ul>
     </div>
   )

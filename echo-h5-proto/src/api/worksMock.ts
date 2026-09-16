@@ -7,7 +7,7 @@
 //    瀑布流要判的就是高低错落，样本全挤在同一个比例里，
 //    有没有按真实宽高排版会长得一模一样。
 
-import type { DraftWorkInput, PublishWorkInput, PublishWorkResult, ResubmitWorkResult, ReviewMode, SubmissionCapability, SubmissionNextAction, Work } from '../types'
+import type { AppealWorkResult, DraftWorkInput, PublishWorkInput, PublishWorkResult, ResubmitWorkResult, ReviewMode, SubmissionCapability, SubmissionNextAction, Work, WorkModeration } from '../types'
 import { assetUrl } from '../lib/assetUrl'
 
 const OCCUPYING = new Set(['pending', 'uploading', 'submitting'])
@@ -283,6 +283,12 @@ type MockWork = Work & {
   contentHash?: string
   resubmitKey?: string
   moderationId?: string
+  appealAt?: number
+  appealText?: string
+  appealResult?: string
+  appealHandledAt?: number
+  reviewedAt?: number
+  handledAt?: number
 }
 
 export interface MockReviewEvidence {
@@ -504,6 +510,78 @@ export function mockResubmit(
     contentHash: hash,
     status: 'pending',
     moderationId,
+  }
+}
+
+const REJECT_REASON = '这一条我们看过了，暂时还不能公开。你可以改一改再试试。'
+
+export function mockWorkModeration(state: WorksMockState, workId: string, authorId: string): WorkModeration {
+  const current = state.works.find((work) => work.id === workId) as MockWork | undefined
+  if (!current || current.authorId !== authorId) {
+    throw Object.assign(new Error('这个作品找不到了。'), { code: 2004 })
+  }
+  const used = current.appealAt != null
+  const appealable = (current.status === 'rejected' || current.status === 'takendown') && !used
+  const showReason = current.status === 'rejected' || current.status === 'takendown' || current.status === 'appealing'
+  return {
+    workId: current.id,
+    status: current.status ?? 'pending',
+    reasonCode: showReason ? 'policy' : null,
+    reasonText: showReason ? REJECT_REASON : null,
+    appealable,
+    appealUsed: used,
+    appeal: current.appealAt != null
+      ? {
+          appealId: current.moderationId ?? current.id,
+          text: current.appealText,
+          appealAt: current.appealAt,
+          result: current.appealResult ?? null,
+          handledAt: current.appealHandledAt ?? null,
+        }
+      : used
+        ? { used: true }
+        : null,
+    reviewedAt: current.reviewedAt ?? null,
+    handledAt: current.handledAt ?? null,
+  }
+}
+
+export function mockAppealWork(
+  state: WorksMockState,
+  workId: string,
+  authorId: string,
+  text: string,
+): AppealWorkResult {
+  const current = state.works.find((work) => work.id === workId) as MockWork | undefined
+  if (!current || current.authorId !== authorId) {
+    throw Object.assign(new Error('这个作品找不到了。'), { code: 2004 })
+  }
+  const trimmed = text.trim()
+  if (!trimmed) {
+    throw Object.assign(new Error('先写一句再说。'), { code: 2001, detail: 'appeal text blank' })
+  }
+  if (trimmed.length > 200) {
+    throw Object.assign(new Error('说得有点长了，缩短一些再试试？'), { code: 2001, detail: 'appeal text exceeds 200' })
+  }
+  if (current.appealAt != null) {
+    throw Object.assign(new Error('这条已经申诉过一次了，我们会认真看的。'), {
+      code: 3410,
+      detail: 'appeal_already_used',
+    })
+  }
+  if (current.status !== 'rejected' && current.status !== 'takendown') {
+    throw Object.assign(new Error('这条现在还不需要申诉。'), { code: 3411, detail: 'appeal_not_applicable' })
+  }
+  const now = Date.now()
+  current.status = 'appealing'
+  current.nextAction = 'none'
+  current.appealAt = now
+  current.appealText = trimmed
+  current.moderationId = current.moderationId ?? `mod_${now}`
+  return {
+    appealId: current.moderationId,
+    state: 'appealing',
+    createdAt: now,
   }
 }
 

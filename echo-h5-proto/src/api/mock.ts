@@ -39,6 +39,8 @@ import type {
   PublishWorkResult,
   DraftWorkInput,
   ResubmitWorkResult,
+  WorkModeration,
+  AppealWorkResult,
 } from '../types'
 import { cardIdOfArrival } from './arrivals'
 import {
@@ -50,6 +52,8 @@ import {
   mockPublish,
   mockResubmit,
   mockSaveDraft,
+  mockWorkModeration,
+  mockAppealWork,
   mockSubmissionCapability,
   type MockReviewEvidence,
   type WorksMockState,
@@ -1172,6 +1176,30 @@ export const mockBackend: EchoBackend = {
     const view = mockAuthorView(found, self)
     if (!d.isGuest) view.favorited = socialState(d).favorites.some((f) => f.accountId === d.accountId && f.workId === workId)
     return { work: view }
+  },
+
+  async workModeration(workId): Promise<WorkModeration> {
+    await delay(80)
+    const d = load()
+    try {
+      return mockWorkModeration(worksState(d), workId, d.accountId)
+    } catch (e) {
+      throw toApiError(e)
+    }
+  },
+
+  async appealWork(workId, text): Promise<AppealWorkResult> {
+    await delay(180)
+    const d = load()
+    const state = worksState(d)
+    try {
+      const result = mockAppealWork(state, workId, d.accountId, text)
+      d.works = state.works
+      save()
+      return result
+    } catch (e) {
+      throw toApiError(e)
+    }
   },
 
   async saveWorkDraft(workId, input: DraftWorkInput): Promise<{ work: Work; contentVersion: number; status: string }> {
