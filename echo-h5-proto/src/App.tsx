@@ -88,6 +88,7 @@ export default function App() {
   const [favoritesOpen, setFavoritesOpen] = useState(false)
   const [openWorkId, setOpenWorkId] = useState<string | null>(null)
   const [immersive, setImmersive] = useState<{ items: Work[]; workId: string } | null>(null)
+  const [profileImmersive, setProfileImmersive] = useState<{ items: Work[]; workId: string } | null>(null)
   const [plazaCategory, setPlazaCategory] = useState<NonNullable<Window['category']> | null>(null)
 
   // —— 进窗后连续下翻的「流上下文」（定案 D21 / 验收 TC-13）——
@@ -270,6 +271,7 @@ export default function App() {
   function handleOpenUser(userId: string) {
     setSearchOpen(false)
     closeWindow()
+    setProfileImmersive(null)
     setProfileUserId(userId)
   }
 
@@ -396,18 +398,32 @@ export default function App() {
         />
       )
     }
-    // 主页盖在全屏卡之上：返回只关主页，必须回到进来的那张卡（D24 ④）
+    if (profileImmersive) {
+      const work = profileImmersive.items.find((item) => item.id === profileImmersive.workId)
+      if (work) {
+        return (
+          <WorkImmersiveScreen
+            work={work}
+            items={profileImmersive.items}
+            onBack={() => setProfileImmersive(null)}
+            onChange={(next) => setProfileImmersive({ items: profileImmersive.items, workId: next.id })}
+            onOpenComments={(next) => setOpenWorkId(next.id)}
+            onOpenAuthor={(next) => {
+              setProfileImmersive(null)
+              setProfileUserId(next.authorId)
+            }}
+          />
+        )
+      }
+    }
+    // 主页盖在广场全屏之上：返回只关主页，必须回到进来的那张卡（D24 ④）
     if (profileUserId) {
       return (
         <UserProfileScreen
           key={profileUserId}
           userId={profileUserId}
           onBack={() => setProfileUserId(null)}
-          // nextCursor 不带出去：续拉走的是 GET /plaza，拿主页的游标去续会串成广场流。
-          // 只把这份作品墙已加载的顺序交给详情页，翻到底就是温柔收尾。
-          onOpenWindow={(card, cards) =>
-            openWindow(card, { cards, nextCursor: null, category: null })
-          }
+          onOpenWork={(work, feed) => setProfileImmersive({ items: feed, workId: work.id })}
         />
       )
     }

@@ -226,6 +226,94 @@ function PlazaTapImmersive() {
   )
 }
 
+function authorHomeWorks(): Work[] {
+  return [
+    immersiveDemoWork(),
+    {
+      ...immersiveDemoWork(),
+      id: 'wk_author_home_2',
+      title: '门框上的那些线',
+      excerpt: '搬家那天量了最后一道，就没再往上画过。',
+      body: '搬家那天量了最后一道，就没再往上画过。',
+      mediaUrl: assetUrl('seed-covers/cover-family-heightmarks.jpg'),
+      width: 1200,
+      height: 900,
+    },
+    {
+      ...immersiveDemoWork(),
+      id: 'wk_author_home_3',
+      title: '相机里还剩十七张',
+      excerpt: '一直没洗，怕洗出来之后就真的只有这十七张了。',
+      body: '一直没洗，怕洗出来之后就真的只有这十七张了。',
+      mediaUrl: assetUrl('seed-covers/cover-daily-camera.jpg'),
+    },
+  ]
+}
+
+function AuthorHomeWall({ plan }: { plan: 'windows' | 'works' }) {
+  const works = authorHomeWorks()
+  return (
+    <div className="vc-page">
+      <p className="vc-label">作者主页 · {plan === 'windows' ? '还在读窗' : '改读作品'}</p>
+      <PhoneFrame>
+        <div className="uprofile">
+          <div className="friend-topbar">
+            <button className="back-btn small" aria-label="返回">←</button>
+            <span className="friend-topbar-title">林 的主页</span>
+          </div>
+          <div className="up-hero">
+            <span className="up-avatar" style={{ background: 'linear-gradient(135deg,#f3d9b8,#e7b98f)' }} />
+            <div className="up-hero-text">
+              <h1 className="up-name">林</h1>
+              <p className="up-persona">把下午的阳光也收起来的人</p>
+            </div>
+          </div>
+          <div className="up-stats">
+            <span className="up-stat">
+              <b className="up-stat-num">68</b>
+              <span className="up-stat-label">粉丝</span>
+            </span>
+            <span className="up-stat-sep" aria-hidden />
+            <span className="up-stat">
+              <b className="up-stat-num">31</b>
+              <span className="up-stat-label">关注</span>
+            </span>
+          </div>
+          <button className="up-follow">关注 林</button>
+          {plan === 'windows' ? (
+            <>
+              <div className="wall-head">
+                <h2 className="wall-title">🌿 ta 打开过的窗</h2>
+                <span className="wall-sub">只看得到 ta 愿意公开的那些</span>
+              </div>
+              <div className="up-empty">
+                <p className="up-empty-title">这里还很安静</p>
+                <p className="up-empty-sub">ta 还没有公开的窗，也许正在慢慢整理。</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="wall-head">
+                <h2 className="wall-title">🌿 ta 的作品</h2>
+                <span className="wall-sub">只看得到 ta 愿意公开的那些</span>
+              </div>
+              <div className="works-grid up-works">
+                <div className="works-col">
+                  <WorkCard work={works[0]} onOpen={() => {}} />
+                  <WorkCard work={works[2]} onOpen={() => {}} />
+                </div>
+                <div className="works-col">
+                  <WorkCard work={works[1]} onOpen={() => {}} />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </PhoneFrame>
+    </div>
+  )
+}
+
 function appealDemoWork(status: Work['status']): Work {
   return {
     id: 'wk_appeal_demo',
@@ -354,6 +442,15 @@ export default function VisualCompare({ params }: { params: URLSearchParams }) {
     )
   }
 
+  if (which === 'author-home') {
+    return (
+      <div className="vc-pair">
+        <AuthorHomeWall plan="windows" />
+        <AuthorHomeWall plan="works" />
+      </div>
+    )
+  }
+
   if (which === 'work-appeal') {
     const plan = params.get('plan')
     if (plan === 'sheet') {
@@ -385,6 +482,7 @@ export default function VisualCompare({ params }: { params: URLSearchParams }) {
         <li><a href="?visual=stranger&plan=B">陌生人明信片墙 · B 案</a></li>
         <li><a href="?visual=stranger&plan=B&empty=0">陌生人明信片墙 · B 案（不含空态）</a></li>
         <li><a href="?visual=work-immersive">广场点进去 · 详情 vs 全屏单卡</a></li>
+        <li><a href="?visual=author-home">作者主页 · 还在读窗 vs 改读作品</a></li>
         <li><a href="?visual=work-appeal">我的作品 · 未通过有没有「看看为什么」</a></li>
         <li><a href="?visual=work-appeal&plan=appealing">我的作品 · 申诉中</a></li>
         <li><a href="?visual=work-appeal&plan=sheet">看看为什么 · 可申 vs 已申</a></li>
