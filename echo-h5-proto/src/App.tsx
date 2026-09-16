@@ -398,33 +398,37 @@ export default function App() {
         />
       )
     }
-    if (profileImmersive) {
-      const work = profileImmersive.items.find((item) => item.id === profileImmersive.workId)
-      if (work) {
-        return (
-          <WorkImmersiveScreen
-            work={work}
-            items={profileImmersive.items}
-            onBack={() => setProfileImmersive(null)}
-            onChange={(next) => setProfileImmersive({ items: profileImmersive.items, workId: next.id })}
-            onOpenComments={(next) => setOpenWorkId(next.id)}
-            onOpenAuthor={(next) => {
-              setProfileImmersive(null)
-              setProfileUserId(next.authorId)
-            }}
-          />
-        )
-      }
-    }
     // 主页盖在广场全屏之上：返回只关主页，必须回到进来的那张卡（D24 ④）
-    if (profileUserId) {
+    // 墙上再进全屏时主页不卸：藏在下面，返回还停在原来的滚动位置
+    if (profileUserId || profileImmersive) {
+      const held = profileImmersive
+      const work = held?.items.find((item) => item.id === held.workId)
       return (
-        <UserProfileScreen
-          key={profileUserId}
-          userId={profileUserId}
-          onBack={() => setProfileUserId(null)}
-          onOpenWork={(work, feed) => setProfileImmersive({ items: feed, workId: work.id })}
-        />
+        <>
+          {profileUserId ? (
+            <div className={work ? 'overlay-hold' : 'overlay-page'} aria-hidden={Boolean(work)}>
+              <UserProfileScreen
+                key={profileUserId}
+                userId={profileUserId}
+                onBack={() => setProfileUserId(null)}
+                onOpenWork={(next, feed) => setProfileImmersive({ items: feed, workId: next.id })}
+              />
+            </div>
+          ) : null}
+          {held && work ? (
+            <WorkImmersiveScreen
+              work={work}
+              items={held.items}
+              onBack={() => setProfileImmersive(null)}
+              onChange={(next) => setProfileImmersive({ items: held.items, workId: next.id })}
+              onOpenComments={(next) => setOpenWorkId(next.id)}
+              onOpenAuthor={(next) => {
+                setProfileImmersive(null)
+                setProfileUserId(next.authorId)
+              }}
+            />
+          ) : null}
+        </>
       )
     }
     if (immersive) {
