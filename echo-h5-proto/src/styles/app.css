@@ -724,6 +724,7 @@
 /* ================= 通用他人主页 (SPEC §2.4) ================= */
 /* 自带滚动：作为浮层时它是 .phone-screen 的直接子元素，外面没有 .screen-scroll 兜着 */
 .uprofile { height: 100%; overflow-y: auto; overflow-x: hidden; padding: 0 14px 28px; }
+.uprofile .up-works { padding-left: 0; padding-right: 0; }
 
 .up-hero { display: flex; align-items: center; gap: 14px; padding: 6px 4px 16px; }
 .up-avatar { width: 62px; height: 62px; border-radius: 50%; flex-shrink: 0; box-shadow: var(--shadow-card); }

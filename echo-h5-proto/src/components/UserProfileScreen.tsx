@@ -1,16 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { UserProfile, Window } from '../types'
-import type { CardOrigin } from '../lib/ids'
+import type { UserProfile, Work } from '../types'
 import { api, ApiError, track } from '../api'
-import CoverPlaceholder from './CoverPlaceholder'
 import OpsMark from './OpsMark'
+import WorkCard from './WorkCard'
 
 interface Props {
   userId: string
   onBack: () => void
-  /** 点作品墙上的一扇窗 → 详情页；带上这份作品墙的顺序，详情页照它上下翻 */
-  /** 🔴 卡片键与窗口键**成对**传，详情页两组端点各要一个。见 lib/ids.ts */
-  onOpenWindow: (card: CardOrigin, cards: CardOrigin[]) => void
+  onOpenWork: (work: Work, feed: Work[]) => void
 }
 
 /**
@@ -25,9 +22,9 @@ interface Props {
  *  ③ **不做任何全站作者排行榜** —— 「个人页上有一个数字」与「把所有人拉出来排名次」是两件事，
  *     前者已放开，后者仍在禁止之列（DECISIONS D14 未被推翻）。
  */
-export default function UserProfileScreen({ userId, onBack, onOpenWindow }: Props) {
+export default function UserProfileScreen({ userId, onBack, onOpenWork }: Props) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [windows, setWindows] = useState<Window[]>([])
+  const [works, setWorks] = useState<Work[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -42,12 +39,12 @@ export default function UserProfileScreen({ userId, onBack, onOpenWindow }: Prop
     setLoading(true)
     setNotFound(false)
     track('user_profile_open', { userId })
-    Promise.all([api.userProfile(userId), api.userWindows(userId)])
-      .then(([p, w]) => {
+    Promise.all([api.userProfile(userId), api.userWorks(userId)])
+      .then(([p, page]) => {
         if (!alive) return
         setProfile(p)
-        setWindows(w.items)
-        setCursor(w.nextCursor)
+        setWorks(page.items)
+        setCursor(page.nextCursor)
       })
       .catch(() => alive && setNotFound(true))
       .finally(() => alive && setLoading(false))
@@ -61,12 +58,12 @@ export default function UserProfileScreen({ userId, onBack, onOpenWindow }: Prop
     pullingRef.current = true
     setLoadingMore(true)
     try {
-      const res = await api.userWindows(userId, cursor)
-      setWindows((cur) => {
+      const page = await api.userWorks(userId, cursor)
+      setWorks((cur) => {
         const seen = new Set(cur.map((w) => w.id))
-        return [...cur, ...res.items.filter((w) => !seen.has(w.id))]
+        return [...cur, ...page.items.filter((w) => !seen.has(w.id))]
       })
-      setCursor(res.nextCursor)
+      setCursor(page.nextCursor)
     } catch {
       /* 续拉失败静默：保留已看到的作品，不弹技术错误脸 */
     } finally {
@@ -105,7 +102,6 @@ export default function UserProfileScreen({ userId, onBack, onOpenWindow }: Prop
       const res = await api.setFollow(profile.id, next)
       track(next ? 'follow_author' : 'unfollow_author', { userId: profile.id })
       setProfile({ ...profile, followedByMe: res.followedByMe, followerCount: res.followerCount })
-      // 关注给一句轻反馈；取关不出话术——不挽留、不追问原因
       if (res.followedByMe) flashToast(`以后 ${profile.nickname} 发布的，你都会看到`)
     } catch (e) {
       flashToast(e instanceof ApiError ? e.message : '待会儿再试一次吧')
@@ -146,6 +142,15 @@ export default function UserProfileScreen({ userId, onBack, onOpenWindow }: Prop
     )
   }
 
+  const cols: Work[][] = [[], []]
+  const heights = [0, 0]
+  for (const w of works) {
+    const ratio = w.width > 0 && w.height > 0 ? w.height / w.width : 1.25
+    const i = heights[0] <= heights[1] ? 0 : 1
+    cols[i].push(w)
+    heights[i] += ratio
+  }
+
   return (
     <div className="uprofile">
       <div className="friend-topbar">
@@ -166,7 +171,6 @@ export default function UserProfileScreen({ userId, onBack, onOpenWindow }: Prop
         </div>
       </div>
 
-      {/* 粉丝数：公开、精确、只在这一页出现。绝不做「谁粉丝最多」的全站榜。 */}
       <div className="up-stats">
         <span className="up-stat">
           <b className="up-stat-num">{profile.followerCount}</b>
@@ -190,43 +194,28 @@ export default function UserProfileScreen({ userId, onBack, onOpenWindow }: Prop
       )}
 
       <div className="wall-head">
-        <h2 className="wall-title">🌿 ta 打开过的窗</h2>
+        <h2 className="wall-title">🌿 ta 的作品</h2>
         <span className="wall-sub">只看得到 ta 愿意公开的那些</span>
       </div>
 
-      {windows.length === 0 ? (
+      {works.length === 0 ? (
         <div className="up-empty">
           <p className="up-empty-title">这里还很安静</p>
-          <p className="up-empty-sub">ta 还没有公开的窗，也许正在慢慢整理。</p>
+          <p className="up-empty-sub">ta 还没有公开的作品，也许正在慢慢整理。</p>
         </div>
       ) : (
         <>
-          <div className="masonry">
-            {windows.map((w) => (
-              <button
-                key={w.id}
-                className="w-card"
-                onClick={() =>
-                  onOpenWindow(
-                    { id: w.id, petId: w.petId },
-                    windows.map((x) => ({ id: x.id, petId: x.petId })),
-                  )
-                }
-              >
-                <div className="w-cover-wrap">
-                  <CoverPlaceholder
-                    data={w.cover}
-                    className={w.span === 'tall' ? 'cover-tall' : 'cover-short'}
-                  />
-                </div>
-                <div className="w-card-body">
-                  <p className="w-recent">{w.recent}</p>
-                </div>
-              </button>
+          <div className="works-grid up-works">
+            {cols.map((col, ci) => (
+              <div className="works-col" key={ci}>
+                {col.map((w) => (
+                  <WorkCard key={w.id} work={w} onOpen={() => onOpenWork(w, works)} />
+                ))}
+              </div>
             ))}
           </div>
           <div ref={sentinelRef} className="plaza-more">
-            {loadingMore ? '还在把更多的窗轻轻推开…' : cursor ? '' : 'ta 的窗，先看到这里吧 🌿'}
+            {loadingMore ? '还在把更多作品轻轻摆出来…' : cursor ? '' : 'ta 的作品，先看到这里吧 🌿'}
           </div>
         </>
       )}
