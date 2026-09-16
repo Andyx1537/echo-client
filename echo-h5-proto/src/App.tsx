@@ -357,7 +357,7 @@ export default function App() {
         />
       )
     }
-    if (openWorkId) {
+    if (openWorkId && !profileUserId && !profileImmersive) {
       return (
         <WorkDetailScreen
           workId={openWorkId}
@@ -400,6 +400,7 @@ export default function App() {
     }
     // 主页盖在广场全屏之上：返回只关主页，必须回到进来的那张卡（D24 ④）
     // 墙上再进全屏时主页不卸：藏在下面，返回还停在原来的滚动位置
+    // 全屏再进评论也不卸：评论叠在上面，返回只关评论
     if (profileUserId || profileImmersive) {
       const held = profileImmersive
       const work = held?.items.find((item) => item.id === held.workId)
@@ -427,6 +428,16 @@ export default function App() {
                 setProfileUserId(next.authorId)
               }}
             />
+          ) : null}
+          {openWorkId ? (
+            <div className="overlay-front">
+              <WorkDetailScreen
+                workId={openWorkId}
+                guest={Boolean(me?.isGuest)}
+                onBack={() => setOpenWorkId(null)}
+                onIdentityChanged={() => { void refreshMe() }}
+              />
+            </div>
           ) : null}
         </>
       )

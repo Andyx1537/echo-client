@@ -127,6 +127,16 @@
   overflow: hidden;
 }
 
+/* 评论叠在主页栈上面：主页和全屏都不卸 */
+.overlay-front {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  background: var(--cream);
+}
+
 /* 浮层盖上来时底下那一屏还挂着：看不见、点不到，滚动位置留下 */
 .overlay-hold {
   position: absolute;
@@ -2464,7 +2474,7 @@ button.wk-card:active,
 .works-scope {
   display: flex; gap: 6px; padding: 0 16px 10px; flex-shrink: 0;
 }
-.wk-detail { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--cream); }
+.wk-detail { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--cream); }
 .wk-detail-body { padding: 0 0 40px; }
 .wk-detail-media { position: relative; background: #e9ddc6; }
 .wk-detail-media img,
