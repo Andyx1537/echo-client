@@ -17,6 +17,7 @@ import UserProfileScreen from './components/UserProfileScreen'
 import PublishScreen from './components/PublishScreen'
 import WorksFeedScreen from './components/WorksFeedScreen'
 import WorkDetailScreen from './components/WorkDetailScreen'
+import WorkImmersiveScreen from './components/WorkImmersiveScreen'
 import FavoritesScreen from './components/FavoritesScreen'
 import {
   REUSE_DEMO_BODY,
@@ -86,6 +87,7 @@ export default function App() {
   const [worksOpen, setWorksOpen] = useState(false)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
   const [openWorkId, setOpenWorkId] = useState<string | null>(null)
+  const [immersive, setImmersive] = useState<{ items: Work[]; workId: string } | null>(null)
   const [plazaCategory, setPlazaCategory] = useState<NonNullable<Window['category']> | null>(null)
 
   // —— 进窗后连续下翻的「流上下文」（定案 D21 / 验收 TC-13）——
@@ -363,6 +365,20 @@ export default function App() {
         />
       )
     }
+    if (immersive) {
+      const work = immersive.items.find((item) => item.id === immersive.workId)
+      if (work) {
+        return (
+          <WorkImmersiveScreen
+            work={work}
+            items={immersive.items}
+            onBack={() => setImmersive(null)}
+            onChange={(next) => setImmersive({ items: immersive.items, workId: next.id })}
+            onOpenComments={(next) => setOpenWorkId(next.id)}
+          />
+        )
+      }
+    }
     if (favoritesOpen) {
       return (
         <FavoritesScreen
@@ -472,7 +488,7 @@ export default function App() {
       case 'home':
         return (
           <PlazaScreen
-            onOpen={(work) => setOpenWorkId(work.id)}
+            onOpen={(work, feed) => setImmersive({ items: feed, workId: work.id })}
             onOpenSearch={() => setSearchOpen(true)}
             guest={Boolean(me?.isGuest)}
           />

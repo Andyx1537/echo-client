@@ -5,13 +5,13 @@ import { reportPlazaSeen } from '../api/phase0'
 import AiGeneratedBadge from './AiGeneratedBadge'
 
 interface Props {
-  onOpen: (work: Work) => void
+  onOpen: (work: Work, feed: Work[]) => void
   onOpenSearch: () => void
   guest?: boolean
 }
 
 /**
- * 共鸣厅：公开作品瀑布。点进去是同一条作品，不是一扇窗。
+ * 共鸣厅：公开作品瀑布。点进去进全屏单卡，不是一扇窗。
  */
 export default function PlazaScreen({ onOpen, onOpenSearch, guest = false }: Props) {
   const [works, setWorks] = useState<Work[]>([])
@@ -93,7 +93,7 @@ export default function PlazaScreen({ onOpen, onOpenSearch, guest = false }: Pro
             {cols.map((col, ci) => (
               <div className="works-col" key={ci}>
                 {col.map((w) => (
-                  <PlazaWorkCard key={w.id} work={w} onOpen={onOpen} />
+                  <PlazaWorkCard key={w.id} work={w} onOpen={() => onOpen(w, works)} />
                 ))}
               </div>
             ))}
