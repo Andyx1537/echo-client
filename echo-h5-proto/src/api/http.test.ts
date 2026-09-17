@@ -345,3 +345,42 @@ describe('http 作品投稿名额', () => {
     expect(res.items).toHaveLength(1)
   })
 })
+
+describe('http 作品运营台', () => {
+  it('队列带 targetType=work，处置走工单 id', async () => {
+    const queueFn = mockFetchOnce({ items: [{ moderationId: 'mod-1', workId: 'wk-1' }], nextCursor: null })
+    const page = await httpBackend.workOperatorQueue('pending')
+    expect(queueFn.mock.calls[0][0]).toContain('/admin/moderation/queue?targetType=work')
+    expect(page.items[0].moderationId).toBe('mod-1')
+
+    const appealQueue = mockFetchOnce({ items: [], nextCursor: null })
+    await httpBackend.workOperatorQueue('appealing')
+    expect(appealQueue.mock.calls[0][0]).toContain('tab=appealing')
+
+    const handleFn = mockFetchOnce({
+      moderationId: 'mod-1',
+      workId: 'wk-1',
+      state: 'approved',
+      workStatus: 'public',
+      handledAt: 1,
+      stateVersion: 2,
+    })
+    await httpBackend.handleWorkModeration('mod-1', { action: 'approve', expectedStateVersion: 1 })
+    expect(handleFn.mock.calls[0][0]).toContain('/admin/moderation/mod-1/handle')
+    expect(JSON.parse(String(handleFn.mock.calls[0][1].body))).toEqual({
+      action: 'approve',
+      expectedStateVersion: 1,
+    })
+
+    const appealFn = mockFetchOnce({
+      moderationId: 'mod-2',
+      workId: 'wk-2',
+      state: 'queued',
+      workStatus: 'pending',
+      handledAt: 2,
+      stateVersion: 4,
+    })
+    await httpBackend.handleWorkAppeal('mod-2', { action: 'overturn', expectedStateVersion: 3 })
+    expect(appealFn.mock.calls[0][0]).toContain('/admin/appeals/mod-2/handle')
+  })
+})

@@ -34,6 +34,11 @@ import type {
   ResubmitWorkResult,
   WorkModeration,
   AppealWorkResult,
+  WorkOperatorTab,
+  WorkOperatorTicket,
+  WorkOperatorHandleInput,
+  WorkAppealHandleInput,
+  WorkOperatorHandleResult,
   WorkComment,
   WorkCommentsPage,
   BehaviorEventInput,
@@ -318,6 +323,12 @@ export interface EchoBackend {
   adaptationProfile(): Promise<AdaptationProfile>
   clearAdaptationProfile(scope: BehaviorPurpose): Promise<AdaptationProfile>
   setRecommendationMode(mode: 'personalized' | 'non_personalized'): Promise<AdaptationProfile>
+
+  /** 运营：作品审核队列。不进 C 端底栏。 */
+  workOperatorQueue(tab?: WorkOperatorTab, cursor?: string): Promise<Paged<WorkOperatorTicket>>
+  workOperatorDetail(moderationId: string): Promise<WorkOperatorTicket>
+  handleWorkModeration(moderationId: string, input: WorkOperatorHandleInput): Promise<WorkOperatorHandleResult>
+  handleWorkAppeal(moderationId: string, input: WorkAppealHandleInput): Promise<WorkOperatorHandleResult>
 }
 
 /**

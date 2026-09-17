@@ -44,18 +44,24 @@ import type {
 } from '../types'
 import { cardIdOfArrival } from './arrivals'
 import {
+  ensureOperatorSeeds,
   freshWorks,
   mockPlazaWorks,
   mockAuthorView,
   mockAuthorWorks,
   mockFeed,
+  mockHandleWorkAppeal,
+  mockHandleWorkModeration,
   mockPublish,
   mockResubmit,
   mockSaveDraft,
   mockWorkModeration,
+  mockWorkOperatorDetail,
+  mockWorkOperatorQueue,
   mockAppealWork,
   mockSubmissionCapability,
   type MockReviewEvidence,
+  type MockWorkTicket,
   type WorksMockState,
 } from './worksMock'
 import {
@@ -199,6 +205,7 @@ interface MockDB {
   /** 作品（t_work）。旧缓存可缺省，读取一律走 worksOf() 兜底 */
   works?: Work[]
   reviewEvidences?: MockReviewEvidence[]
+  workTickets?: MockWorkTicket[]
   /** 匿名共鸣厅批次。绑定后不用。旧缓存可缺省 */
   plazaBatch?: { ids: string[]; startedAt: number }
   comments?: SocialMockState['comments']
@@ -1152,8 +1159,7 @@ export const mockBackend: EchoBackend = {
     }
     try {
       const result = mockPublish(state, input, d.accountId, input.mediaKey, input.posterKey ?? '')
-      d.works = state.works
-      d.reviewEvidences = state.evidences
+      persistWorks(d, state)
       save()
       return result
     } catch (error) {
@@ -1209,7 +1215,7 @@ export const mockBackend: EchoBackend = {
     const state = worksState(d)
     try {
       const result = mockAppealWork(state, workId, d.accountId, text)
-      d.works = state.works
+      persistWorks(d, state)
       save()
       return result
     } catch (e) {
@@ -1237,7 +1243,7 @@ export const mockBackend: EchoBackend = {
     const state = worksState(d)
     try {
       const result = mockResubmit(state, workId, d.accountId, input.contentVersion, input.idempotencyKey)
-      d.works = state.works
+      persistWorks(d, state)
       save()
       return result
     } catch (e) {
@@ -1365,6 +1371,45 @@ export const mockBackend: EchoBackend = {
   async setRecommendationMode(mode) {
     return writeRecommendationMode(load().accountId, mode)
   },
+
+  async workOperatorQueue(tab = 'pending', cursor) {
+    await delay(80)
+    return slicePage(mockWorkOperatorQueue(worksState(load()), tab), cursor)
+  },
+  async workOperatorDetail(moderationId) {
+    await delay(60)
+    try {
+      return mockWorkOperatorDetail(worksState(load()), moderationId)
+    } catch (error) {
+      throw toApiError(error)
+    }
+  },
+  async handleWorkModeration(moderationId, input) {
+    await delay(160)
+    const d = load()
+    const state = worksState(d)
+    try {
+      const result = mockHandleWorkModeration(state, moderationId, input)
+      persistWorks(d, state)
+      save()
+      return result
+    } catch (error) {
+      throw toApiError(error)
+    }
+  },
+  async handleWorkAppeal(moderationId, input) {
+    await delay(160)
+    const d = load()
+    const state = worksState(d)
+    try {
+      const result = mockHandleWorkAppeal(state, moderationId, input)
+      persistWorks(d, state)
+      save()
+      return result
+    } catch (error) {
+      throw toApiError(error)
+    }
+  },
 }
 
 function toApiError(error: unknown): ApiError {
@@ -1382,6 +1427,12 @@ function socialState(d: MockDB): SocialMockState {
   return { comments: d.comments, favorites: d.favorites }
 }
 
+function persistWorks(d: MockDB, state: WorksMockState): void {
+  d.works = state.works
+  d.reviewEvidences = state.evidences
+  d.workTickets = state.tickets
+}
+
 function worksState(d: MockDB): WorksMockState {
   const fresh = freshWorks(d.accountId)
   if (!d.works) {
@@ -1390,7 +1441,14 @@ function worksState(d: MockDB): WorksMockState {
   if (!d.reviewEvidences) {
     d.reviewEvidences = fresh.evidences
   }
-  return { works: d.works, evidences: d.reviewEvidences }
+  if (!d.workTickets) {
+    d.workTickets = fresh.tickets
+  }
+  const state = { works: d.works, evidences: d.reviewEvidences, tickets: d.workTickets }
+  ensureOperatorSeeds(state)
+  d.works = state.works
+  d.workTickets = state.tickets
+  return state
 }
 
 /** 游标 = 下一页起始偏移，与 plaza 同一套（前端只认 nextCursor，不解析其含义）。 */

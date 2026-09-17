@@ -2460,6 +2460,33 @@ button.wk-card:active,
 }
 .works-end { margin: 2px auto 22px; font-size: 12px; color: var(--ink-3); }
 
+.ops-queue { background: var(--cream); }
+.ops-tabs {
+  display: flex; gap: 8px; padding: 0 18px 10px;
+}
+.ops-tab {
+  padding: 6px 14px; border-radius: 14px;
+  background: var(--cream-2); color: var(--ink-2);
+  font-size: 13px; font-weight: 600;
+}
+.ops-tab.on { background: var(--amber-soft); color: #5a3d14; }
+.ops-error { padding: 0 18px 8px; }
+.ops-list { list-style: none; margin: 0; padding: 0 14px 28px; display: flex; flex-direction: column; gap: 10px; }
+.ops-item {
+  background: var(--paper); border-radius: var(--radius);
+  box-shadow: var(--shadow-card); padding: 14px 14px 12px;
+}
+.ops-meta { margin: 8px 0 0; font-size: 12px; color: var(--ink-3); }
+.ops-appeal { margin: 8px 0 0; font-size: 13px; color: var(--ink-2); line-height: 1.6; }
+.ops-actions { display: flex; gap: 8px; margin-top: 12px; }
+.ops-btn {
+  padding: 7px 14px; border-radius: 14px;
+  background: var(--cream-2); color: var(--ink-2);
+  font-size: 13px; font-weight: 600;
+}
+.ops-btn.primary { background: var(--amber-soft); color: #5a3d14; }
+.ops-btn:disabled { opacity: .5; }
+
 .works-empty {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 8px; padding: 30px 34px 80px;

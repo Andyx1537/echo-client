@@ -855,6 +855,74 @@ export interface AppealWorkResult {
   createdAt: number
 }
 
+/** GET /admin/moderation/queue?targetType=work 单条。 */
+export type WorkOperatorTab = 'pending' | 'appealing'
+export type WorkTicketState =
+  | 'queued'
+  | 'assigned'
+  | 'reviewing'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled'
+  | 'takendown'
+  | 'appealing'
+export type WorkOperatorAction = 'approve' | 'reject' | 'takedown' | 'restore'
+export type WorkAppealAction = 'uphold' | 'overturn'
+
+export interface WorkOperatorSnapshot {
+  title?: string
+  body?: string
+  mediaKey?: string
+  coverUrl?: string
+}
+
+export interface WorkOperatorTicket {
+  moderationId: string
+  targetType: 'work'
+  targetId: string
+  workId: string
+  submitBy: string
+  state: WorkTicketState
+  stateVersion: number
+  contentVersion: number
+  workSnapshot?: WorkOperatorSnapshot
+  workStatus?: WorkStatus
+  originType?: string
+  reviewedAt?: number | null
+  createdAt: number
+  note?: string | null
+  handledBy?: string | null
+  handledAt?: number | null
+  reasonCode?: string | null
+  appeal?: WorkAppealBlock | null
+}
+
+export interface WorkOperatorHandleInput {
+  action: WorkOperatorAction
+  expectedStateVersion: number
+  reasonCode?: string
+  note?: string
+}
+
+export interface WorkAppealHandleInput {
+  action: WorkAppealAction
+  expectedStateVersion: number
+  reasonCode?: string
+  note?: string
+}
+
+export interface WorkOperatorHandleResult {
+  moderationId: string
+  workId: string
+  targetType: 'work'
+  state: WorkTicketState
+  workStatus: WorkStatus
+  reviewedAt?: number | null
+  handledAt: number
+  stateVersion: number
+  appealId?: string
+}
+
 export type BehaviorPurpose = 'ui_adaptation' | 'public_recommendation' | 'private_generation'
 
 export interface BehaviorEventInput {
