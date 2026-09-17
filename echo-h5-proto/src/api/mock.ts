@@ -784,7 +784,13 @@ export const mockBackend: EchoBackend = {
       d.plazaBatch = page.batch
       save()
     }
-    return slicePage(page.items, cursor)
+    return { ...slicePage(page.items, cursor), reqId: '' }
+  },
+  async openPlazaImmersive() {
+    return { reqId: '', countsTowardExposure: false }
+  },
+  async reportPlazaImpressions() {
+    return { accepted: 0, rejected: 0 }
   },
 
   async windowDetail(rawWindowId): Promise<WindowDetail> {

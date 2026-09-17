@@ -5,7 +5,7 @@ import { reportPlazaSeen } from '../api/phase0'
 import AiGeneratedBadge from './AiGeneratedBadge'
 
 interface Props {
-  onOpen: (work: Work, feed: Work[]) => void
+  onOpen: (work: Work, feed: Work[], fromReqId: string) => void
   onOpenSearch: () => void
   guest?: boolean
 }
@@ -16,10 +16,20 @@ interface Props {
 export default function PlazaScreen({ onOpen, onOpenSearch, guest = false }: Props) {
   const [works, setWorks] = useState<Work[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
+  const [reqIdByWork, setReqIdByWork] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const pullingRef = useRef(false)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  function rememberReqIds(items: Work[], reqId?: string) {
+    if (!reqId) return
+    setReqIdByWork((cur) => {
+      const next = { ...cur }
+      for (const item of items) next[item.id] = reqId
+      return next
+    })
+  }
 
   useEffect(() => {
     let alive = true
@@ -29,6 +39,7 @@ export default function PlazaScreen({ onOpen, onOpenSearch, guest = false }: Pro
         if (!alive) return
         setWorks(res.items)
         setCursor(res.nextCursor)
+        rememberReqIds(res.items, res.reqId)
         reportPlazaSeen(res.items)
       })
       .finally(() => alive && setLoading(false))
@@ -47,6 +58,7 @@ export default function PlazaScreen({ onOpen, onOpenSearch, guest = false }: Pro
         const seen = new Set(cur.map((w) => w.id))
         return [...cur, ...res.items.filter((w) => !seen.has(w.id))]
       })
+      rememberReqIds(res.items, res.reqId)
       setCursor(res.nextCursor)
     } catch {
       /* 续拉失败静默：保留已看到的内容 */
@@ -93,7 +105,7 @@ export default function PlazaScreen({ onOpen, onOpenSearch, guest = false }: Pro
             {cols.map((col, ci) => (
               <div className="works-col" key={ci}>
                 {col.map((w) => (
-                  <PlazaWorkCard key={w.id} work={w} onOpen={() => onOpen(w, works)} />
+                  <PlazaWorkCard key={w.id} work={w} onOpen={() => onOpen(w, works, reqIdByWork[w.id] ?? '')} />
                 ))}
               </div>
             ))}

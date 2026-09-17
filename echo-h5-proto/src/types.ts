@@ -396,6 +396,8 @@ export interface OnboardingCandidate {
 export interface Paged<T> {
   items: T[]
   nextCursor: string | null
+  /** 广场网格下发快照。全屏记 n 时用它去换 immersive reqId。 */
+  reqId?: string
 }
 
 /** 用户级投稿名额。权威在服务端，前端不得按本地列表推算。 */

@@ -1,11 +1,14 @@
-import { useRef, type TouchEvent } from 'react'
+import { useEffect, useRef, type TouchEvent } from 'react'
 import type { Work } from '../types'
+import { api } from '../api'
 import AiGeneratedBadge from './AiGeneratedBadge'
+import { immersiveDwellCounts, IMMERSIVE_DWELL_MS, plazaImpressionItem } from '../lib/workExposure'
 import { isWorkFeedNavigable, localNextWork, localPrevWork, workImmersiveSwipe } from '../lib/workFeed'
 
 interface Props {
   work: Work
   items: Work[]
+  reqId?: string
   onBack: () => void
   onChange: (work: Work) => void
   onOpenComments: (work: Work) => void
@@ -16,6 +19,7 @@ interface Props {
 export default function WorkImmersiveScreen({
   work,
   items,
+  reqId,
   onBack,
   onChange,
   onOpenComments,
@@ -28,6 +32,22 @@ export default function WorkImmersiveScreen({
   const navigable = isWorkFeedNavigable(feed)
   const cover = work.mediaType === 'video' ? work.posterUrl || work.mediaUrl : work.mediaUrl
   const start = useRef<{ x: number; y: number } | null>(null)
+
+  useEffect(() => {
+    if (!reqId) return
+    const begun = Date.now()
+    const timer = window.setTimeout(() => {
+      const dwellMs = Date.now() - begun
+      if (!immersiveDwellCounts(dwellMs)) return
+      void api.reportPlazaImpressions({
+        reqId,
+        items: [plazaImpressionItem(work.id, Math.max(0, index), dwellMs, Date.now())],
+      }).catch(() => {
+        /* 上报失败少记，不挡浏览 */
+      })
+    }, IMMERSIVE_DWELL_MS)
+    return () => window.clearTimeout(timer)
+  }, [reqId, work.id, index])
 
   function handleTouchStart(e: TouchEvent<HTMLDivElement>) {
     const t = e.touches[0]

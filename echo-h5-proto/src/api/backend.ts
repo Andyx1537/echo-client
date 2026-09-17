@@ -193,6 +193,12 @@ export interface EchoBackend {
 
   // 6. 窗口页 / 广场
   plaza(cursor?: string): Promise<Paged<Work>>
+  /** 从网格 reqId 新开全屏快照。快照没了也进得去，只是不记 n。 */
+  openPlazaImmersive(fromReqId: string): Promise<{ reqId: string; countsTowardExposure: boolean }>
+  reportPlazaImpressions(payload: {
+    reqId: string
+    items: Array<{ cardId: string; pos: number; dwellMs: number; ts: number }>
+  }): Promise<{ accepted: number; rejected: number }>
   windowDetail(petId: PetId): Promise<WindowDetail>
   windowSeen(petId: PetId): Promise<{ ok: boolean }>
   insights(): Promise<Insights>

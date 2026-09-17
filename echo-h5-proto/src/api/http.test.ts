@@ -112,6 +112,35 @@ describe('http 广场游标续拉（TC-13 同一条流）', () => {
     expect(url).toMatch(/\/plaza$/)
   })
 
+  it('plaza() 收下网格 reqId', async () => {
+    mockFetchOnce({ items: [], nextCursor: null, reqId: 'grid-1' })
+    const res = await httpBackend.plaza()
+    expect(res.reqId).toBe('grid-1')
+  })
+
+  it('openPlazaImmersive 把网格 reqId 交给全屏快照', async () => {
+    const fn = mockFetchOnce({ reqId: 'imm-1', countsTowardExposure: true })
+    const res = await httpBackend.openPlazaImmersive('grid-1')
+    const [url, init] = fn.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/plaza/immersive')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(String(init.body))).toEqual({ fromReqId: 'grid-1' })
+    expect(res.reqId).toBe('imm-1')
+    expect(res.countsTowardExposure).toBe(true)
+  })
+
+  it('reportPlazaImpressions 按已有 impressions 契约上报', async () => {
+    const fn = mockFetchOnce({ accepted: 1, rejected: 0 })
+    const res = await httpBackend.reportPlazaImpressions({
+      reqId: 'imm-1',
+      items: [{ cardId: 'wk-1', pos: 0, dwellMs: 1200, ts: 9 }],
+    })
+    const [url, init] = fn.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/plaza/impressions')
+    expect(JSON.parse(String(init.body)).reqId).toBe('imm-1')
+    expect(res.accepted).toBe(1)
+  })
+
   it('plaza() 按作品列表读取，不带私域卡入口', async () => {
     mockFetchOnce({
       items: [{

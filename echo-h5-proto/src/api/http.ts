@@ -205,6 +205,10 @@ export const httpBackend: EchoBackend = {
     get<RememberWall>(`/windows/${encodeURIComponent(windowId)}/remember`),
 
   plaza: (cursor) => get<Paged<Work>>(`/plaza${pageQuery(cursor)}`),
+  openPlazaImmersive: (fromReqId) =>
+    post<{ reqId: string; countsTowardExposure: boolean }>('/plaza/immersive', { fromReqId }),
+  reportPlazaImpressions: (payload) =>
+    post<{ accepted: number; rejected: number }>('/plaza/impressions', payload),
   windowDetail: (windowId) =>
     get<WindowDetail>(`/windows/${encodeURIComponent(windowId)}`),
   windowSeen: (windowId) =>
