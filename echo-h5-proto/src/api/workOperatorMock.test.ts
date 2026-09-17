@@ -60,6 +60,32 @@ describe('作品运营台 mock', () => {
     expect(mockWorkOperatorQueue(again, 'pending').some((item) => item.moderationId === open.moderationId)).toBe(true)
   })
 
+  it('已公开可下架，再上架不改首次过审时间', () => {
+    const state = freshWorks('me')
+    const live = mockWorkOperatorQueue(state, 'public')
+    expect(live.length).toBeGreaterThanOrEqual(1)
+    const first = live[0]
+    const reviewedAt = state.works.find((work) => work.id === first.workId) as { reviewedAt?: number } | undefined
+    const firstReviewed = reviewedAt?.reviewedAt
+    const down = mockHandleWorkModeration(state, first.moderationId, {
+      action: 'takedown',
+      expectedStateVersion: first.stateVersion,
+      reasonCode: 'policy',
+    })
+    expect(down.workStatus).toBe('takendown')
+    expect(mockWorkOperatorQueue(state, 'public').some((item) => item.moderationId === first.moderationId)).toBe(false)
+    expect(mockWorkOperatorQueue(state, 'takendown').some((item) => item.moderationId === first.moderationId)).toBe(true)
+
+    const ticket = mockWorkOperatorQueue(state, 'takendown').find((item) => item.moderationId === first.moderationId)
+    const restored = mockHandleWorkModeration(state, first.moderationId, {
+      action: 'restore',
+      expectedStateVersion: ticket?.stateVersion ?? down.stateVersion,
+    })
+    expect(restored.workStatus).toBe('public')
+    expect(restored.reviewedAt).toBe(firstReviewed)
+    expect(mockWorkOperatorQueue(state, 'public').some((item) => item.moderationId === first.moderationId)).toBe(true)
+  })
+
   it('版本对不上就拒绝写', () => {
     const state = freshWorks('me')
     const first = mockWorkOperatorQueue(state, 'pending')[0]

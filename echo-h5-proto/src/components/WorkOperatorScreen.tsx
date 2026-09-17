@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import { api, ApiError } from '../api'
-import type { WorkOperatorTab, WorkOperatorTicket } from '../types'
+import type { WorkOperatorAction, WorkOperatorTab, WorkOperatorTicket } from '../types'
+
+const TABS: { id: WorkOperatorTab; label: string }[] = [
+  { id: 'pending', label: '待审' },
+  { id: 'appealing', label: '申诉' },
+  { id: 'public', label: '已公开' },
+  { id: 'takendown', label: '已下架' },
+]
 
 /** 运营作品台。入口 `?ops=works`，不进 C 端底栏。 */
 export default function WorkOperatorScreen() {
@@ -26,21 +33,24 @@ export default function WorkOperatorScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab])
 
-  async function act(item: WorkOperatorTicket, kind: 'approve' | 'reject' | 'uphold' | 'overturn') {
+  async function act(
+    item: WorkOperatorTicket,
+    kind: WorkOperatorAction | 'uphold' | 'overturn',
+  ) {
     if (busyId) return
     setBusyId(item.moderationId)
     setError(null)
     try {
-      if (kind === 'approve' || kind === 'reject') {
-        await api.handleWorkModeration(item.moderationId, {
-          action: kind,
-          expectedStateVersion: item.stateVersion,
-          reasonCode: kind === 'reject' ? 'policy' : undefined,
-        })
-      } else {
+      if (kind === 'uphold' || kind === 'overturn') {
         await api.handleWorkAppeal(item.moderationId, {
           action: kind,
           expectedStateVersion: item.stateVersion,
+        })
+      } else {
+        await api.handleWorkModeration(item.moderationId, {
+          action: kind,
+          expectedStateVersion: item.stateVersion,
+          reasonCode: kind === 'reject' || kind === 'takedown' ? 'policy' : undefined,
         })
       }
       await load(tab, true)
@@ -55,24 +65,21 @@ export default function WorkOperatorScreen() {
     <div className="works ops-queue">
       <div className="works-head">作品审核</div>
       <div className="ops-tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'pending'}
-          className={tab === 'pending' ? 'ops-tab on' : 'ops-tab'}
-          onClick={() => setTab('pending')}
-        >
-          待审
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'appealing'}
-          className={tab === 'appealing' ? 'ops-tab on' : 'ops-tab'}
-          onClick={() => setTab('appealing')}
-        >
-          申诉
-        </button>
+        {TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.id}
+            className={tab === item.id ? 'ops-tab on' : 'ops-tab'}
+            onClick={() => {
+              setItems(null)
+              setTab(item.id)
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
       {error && <p className="wk-moderation-error ops-error">{error}</p>}
       {items == null ? (
@@ -89,54 +96,66 @@ export default function WorkOperatorScreen() {
               <p className="wk-title">{item.workSnapshot?.title || '没有标题'}</p>
               <p className="wk-excerpt">{item.workSnapshot?.body || ''}</p>
               <p className="ops-meta">
-                {item.workStatus === 'appealing' ? '申诉中' : '已提交'} · {item.submitBy}
+                {statusLabel(item)} · {item.submitBy}
               </p>
               {item.appeal?.text && <p className="ops-appeal">{item.appeal.text}</p>}
-              <div className="ops-actions">
-                {tab === 'pending' ? (
-                  <>
-                    <button
-                      type="button"
-                      className="ops-btn primary"
-                      disabled={busyId === item.moderationId}
-                      onClick={() => void act(item, 'approve')}
-                    >
-                      通过
-                    </button>
-                    <button
-                      type="button"
-                      className="ops-btn"
-                      disabled={busyId === item.moderationId}
-                      onClick={() => void act(item, 'reject')}
-                    >
-                      先不公开
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className="ops-btn"
-                      disabled={busyId === item.moderationId}
-                      onClick={() => void act(item, 'uphold')}
-                    >
-                      维持原判
-                    </button>
-                    <button
-                      type="button"
-                      className="ops-btn primary"
-                      disabled={busyId === item.moderationId}
-                      onClick={() => void act(item, 'overturn')}
-                    >
-                      回到待审
-                    </button>
-                  </>
-                )}
-              </div>
+              <div className="ops-actions">{actions(tab, item, busyId, act)}</div>
             </li>
           ))}
         </ul>
       )}
     </div>
+  )
+}
+
+function statusLabel(item: WorkOperatorTicket): string {
+  if (item.workStatus === 'appealing') return '申诉中'
+  if (item.workStatus === 'public' || item.state === 'approved') return '广场上'
+  if (item.workStatus === 'takendown' || item.state === 'takendown') return '已下架'
+  return '已提交'
+}
+
+function actions(
+  tab: WorkOperatorTab,
+  item: WorkOperatorTicket,
+  busyId: string | null,
+  act: (item: WorkOperatorTicket, kind: WorkOperatorAction | 'uphold' | 'overturn') => void,
+) {
+  const busy = busyId === item.moderationId
+  if (tab === 'public') {
+    return (
+      <button type="button" className="ops-btn" disabled={busy} onClick={() => void act(item, 'takedown')}>
+        先收起来
+      </button>
+    )
+  }
+  if (tab === 'takendown') {
+    return (
+      <button type="button" className="ops-btn primary" disabled={busy} onClick={() => void act(item, 'restore')}>
+        再放回广场
+      </button>
+    )
+  }
+  if (tab === 'appealing') {
+    return (
+      <>
+        <button type="button" className="ops-btn" disabled={busy} onClick={() => void act(item, 'uphold')}>
+          维持原判
+        </button>
+        <button type="button" className="ops-btn primary" disabled={busy} onClick={() => void act(item, 'overturn')}>
+          回到待审
+        </button>
+      </>
+    )
+  }
+  return (
+    <>
+      <button type="button" className="ops-btn primary" disabled={busy} onClick={() => void act(item, 'approve')}>
+        通过
+      </button>
+      <button type="button" className="ops-btn" disabled={busy} onClick={() => void act(item, 'reject')}>
+        先不公开
+      </button>
+    </>
   )
 }
