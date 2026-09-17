@@ -1,0 +1,12 @@
+---
+description: 图像和吃 CPU 的预览一律系统 Chrome，禁止塞进 Cursor
+alwaysApply: true
+---
+
+# 预览外置浏览器
+
+图像、截图、比稿、视频、画布，以及任何会拖垮 CPU 的预览，全部拿到系统 Chrome。不要用 Cursor 对话或内置 Simple Browser。
+
+对话里只给可打开的地址（Vite / `?visual=` / 真实路由）。禁止 `![...](路径)`，禁止贴 PNG，禁止为了给对话看而去截图。
+
+备忘：`echo-doc/docs/MEMO-preview-to-external-browser.md`。
