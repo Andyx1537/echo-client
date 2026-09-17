@@ -21,6 +21,7 @@ export interface MockCardTicket {
   appealAt?: number
   appealText?: string
   preAppealStatus?: string
+  slaBreached?: boolean
 }
 
 export interface CardOpsState {
@@ -41,6 +42,7 @@ export function freshCardOps(now = Date.now()): CardOpsState {
         body: '晚上风一来，它就会轻轻动一下。',
         originType: 'user',
         createdAt: now - 50 * 60_000,
+        slaBreached: true,
       },
       {
         moderationId: 'cmod_pending_2',
@@ -176,6 +178,7 @@ function toCardTicket(ticket: MockCardTicket): CardOperatorTicket {
     cardSnapshot: { title: ticket.title, body: ticket.body },
     originType: ticket.originType,
     createdAt: ticket.createdAt,
+    slaBreached: ticket.slaBreached === true,
     appeal: ticket.appealAt
       ? { appealId: ticket.moderationId, text: ticket.appealText, appealAt: ticket.appealAt }
       : ticket.handledAt

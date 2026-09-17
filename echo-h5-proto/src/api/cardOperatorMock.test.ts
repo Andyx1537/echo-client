@@ -24,6 +24,13 @@ describe('回忆卡运营 mock', () => {
     expect(next.updatedAt).toBeTruthy()
   })
 
+  it('超时只信服务端字段，不自己算', () => {
+    const state = freshCardOps()
+    const overdue = mockCardOperatorQueue(state, 'pending').find((item) => item.slaBreached)
+    expect(overdue?.slaBreached).toBe(true)
+    expect(mockCardOperatorQueue(state, 'handled').every((item) => item.slaBreached !== true)).toBe(true)
+  })
+
   it('已公开可下架，不能直接恢复', () => {
     const state = freshCardOps()
     const open = mockCardOperatorQueue(state, 'handled').find((item) => item.cardStatus === 'public')

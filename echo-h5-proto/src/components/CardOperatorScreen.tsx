@@ -88,6 +88,7 @@ export default function CardOperatorScreen() {
               <p className="ops-meta">
                 {cardStatusLabel(item)}
                 {item.originType === 'official' ? ' · 官方号' : ''}
+                {item.slaBreached === true ? ' · 已超时' : ''}
                 {item.appeal?.appealAt ? ' · 已申诉' : ''}
                 {' · '}{item.submitBy}
               </p>
