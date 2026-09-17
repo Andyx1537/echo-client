@@ -357,7 +357,7 @@ export default function App() {
         />
       )
     }
-    if (openWorkId && !profileUserId && !profileImmersive) {
+    if (openWorkId && !profileUserId && !profileImmersive && !immersive) {
       return (
         <WorkDetailScreen
           workId={openWorkId}
@@ -446,14 +446,26 @@ export default function App() {
       const work = immersive.items.find((item) => item.id === immersive.workId)
       if (work) {
         return (
-          <WorkImmersiveScreen
-            work={work}
-            items={immersive.items}
-            onBack={() => setImmersive(null)}
-            onChange={(next) => setImmersive({ items: immersive.items, workId: next.id })}
-            onOpenComments={(next) => setOpenWorkId(next.id)}
-            onOpenAuthor={(next) => setProfileUserId(next.authorId)}
-          />
+          <>
+            <WorkImmersiveScreen
+              work={work}
+              items={immersive.items}
+              onBack={() => setImmersive(null)}
+              onChange={(next) => setImmersive({ items: immersive.items, workId: next.id })}
+              onOpenComments={(next) => setOpenWorkId(next.id)}
+              onOpenAuthor={(next) => setProfileUserId(next.authorId)}
+            />
+            {openWorkId ? (
+              <div className="overlay-front">
+                <WorkDetailScreen
+                  workId={openWorkId}
+                  guest={Boolean(me?.isGuest)}
+                  onBack={() => setOpenWorkId(null)}
+                  onIdentityChanged={() => { void refreshMe() }}
+                />
+              </div>
+            ) : null}
+          </>
         )
       }
     }
