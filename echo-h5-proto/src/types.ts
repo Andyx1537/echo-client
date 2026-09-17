@@ -904,6 +904,44 @@ export interface WorkOperatorHandleInput {
   note?: string
 }
 
+export type CardOperatorTab = 'pending' | 'appealing' | 'handled'
+export type CardOperatorAction = 'approve' | 'reject' | 'takedown'
+export type ModerationMode = 'review_first' | 'publish_first'
+
+export interface CardOperatorSnapshot {
+  title?: string
+  body?: string
+}
+
+export interface CardOperatorTicket {
+  moderationId: string
+  cardId: string
+  submitBy: string
+  state: string
+  cardStatus?: string
+  cardSnapshot?: CardOperatorSnapshot
+  originType?: string
+  createdAt: number
+  slaDueAt?: number
+  slaBreached?: boolean
+  appeal?: WorkAppealBlock | null
+}
+
+export interface CardOperatorHandleResult {
+  moderationId: string
+  cardId: string
+  state: string
+  cardStatus: string
+  reviewedAt?: number | null
+  handledAt: number
+}
+
+export interface ModerationSettings {
+  mode: ModerationMode
+  updatedAt: number | null
+  updatedBy: string | null
+}
+
 export interface WorkAppealHandleInput {
   action: WorkAppealAction
   expectedStateVersion: number

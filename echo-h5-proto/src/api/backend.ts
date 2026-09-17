@@ -39,6 +39,13 @@ import type {
   WorkOperatorHandleInput,
   WorkAppealHandleInput,
   WorkOperatorHandleResult,
+  CardOperatorTab,
+  CardOperatorTicket,
+  CardOperatorHandleResult,
+  CardOperatorAction,
+  WorkAppealAction,
+  ModerationSettings,
+  ModerationMode,
   WorkComment,
   WorkCommentsPage,
   BehaviorEventInput,
@@ -329,6 +336,11 @@ export interface EchoBackend {
   workOperatorDetail(moderationId: string): Promise<WorkOperatorTicket>
   handleWorkModeration(moderationId: string, input: WorkOperatorHandleInput): Promise<WorkOperatorHandleResult>
   handleWorkAppeal(moderationId: string, input: WorkAppealHandleInput): Promise<WorkOperatorHandleResult>
+  cardOperatorQueue(tab?: CardOperatorTab, cursor?: string): Promise<Paged<CardOperatorTicket>>
+  handleCardModeration(moderationId: string, action: CardOperatorAction, reasonCode?: string): Promise<CardOperatorHandleResult>
+  handleCardAppeal(moderationId: string, action: WorkAppealAction): Promise<CardOperatorHandleResult>
+  moderationSettings(): Promise<ModerationSettings>
+  updateModerationSettings(mode: ModerationMode): Promise<ModerationSettings>
 }
 
 /**

@@ -65,6 +65,14 @@ import {
   type WorksMockState,
 } from './worksMock'
 import {
+  freshCardOps,
+  mockCardOperatorQueue,
+  mockHandleCard,
+  mockHandleCardAppeal,
+  mockUpdateSettings,
+  type CardOpsState,
+} from './cardOperatorMock'
+import {
   freshSocial,
   mockCommentPage,
   mockDeleteComment,
@@ -210,6 +218,8 @@ interface MockDB {
   plazaBatch?: { ids: string[]; startedAt: number }
   comments?: SocialMockState['comments']
   favorites?: SocialMockState['favorites']
+  cardTickets?: CardOpsState['tickets']
+  moderationSettings?: CardOpsState['settings']
 }
 
 const AVATAR_POOL = [
@@ -1410,6 +1420,49 @@ export const mockBackend: EchoBackend = {
       throw toApiError(error)
     }
   },
+  async cardOperatorQueue(tab = 'pending', cursor) {
+    await delay(80)
+    return slicePage(mockCardOperatorQueue(cardOpsState(load()), tab), cursor)
+  },
+  async handleCardModeration(moderationId, action, reasonCode) {
+    await delay(160)
+    const d = load()
+    const state = cardOpsState(d)
+    try {
+      const result = mockHandleCard(state, moderationId, action, reasonCode)
+      persistCardOps(d, state)
+      save()
+      return result
+    } catch (error) {
+      throw toApiError(error)
+    }
+  },
+  async handleCardAppeal(moderationId, action) {
+    await delay(160)
+    const d = load()
+    const state = cardOpsState(d)
+    try {
+      const result = mockHandleCardAppeal(state, moderationId, action)
+      persistCardOps(d, state)
+      save()
+      return result
+    } catch (error) {
+      throw toApiError(error)
+    }
+  },
+  async moderationSettings() {
+    await delay(40)
+    return cardOpsState(load()).settings
+  },
+  async updateModerationSettings(mode) {
+    await delay(80)
+    const d = load()
+    const state = cardOpsState(d)
+    const result = mockUpdateSettings(state, mode, d.accountId)
+    persistCardOps(d, state)
+    save()
+    return result
+  },
 }
 
 function toApiError(error: unknown): ApiError {
@@ -1425,6 +1478,22 @@ function socialState(d: MockDB): SocialMockState {
   if (!d.comments) d.comments = fresh.comments
   if (!d.favorites) d.favorites = fresh.favorites
   return { comments: d.comments, favorites: d.favorites }
+}
+
+function persistCardOps(d: MockDB, state: CardOpsState): void {
+  d.cardTickets = state.tickets
+  d.moderationSettings = state.settings
+}
+
+function cardOpsState(d: MockDB): CardOpsState {
+  const fresh = freshCardOps()
+  if (!d.cardTickets) d.cardTickets = fresh.tickets
+  if (!d.moderationSettings) d.moderationSettings = fresh.settings
+  const known = new Set(d.cardTickets.map((ticket) => ticket.moderationId))
+  for (const ticket of fresh.tickets) {
+    if (!known.has(ticket.moderationId)) d.cardTickets.push(ticket)
+  }
+  return { tickets: d.cardTickets, settings: d.moderationSettings }
 }
 
 function persistWorks(d: MockDB, state: WorksMockState): void {

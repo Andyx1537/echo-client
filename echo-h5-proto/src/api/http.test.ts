@@ -390,5 +390,14 @@ describe('http 作品运营台', () => {
     })
     await httpBackend.handleWorkAppeal('mod-2', { action: 'overturn', expectedStateVersion: 3 })
     expect(appealFn.mock.calls[0][0]).toContain('/admin/appeals/mod-2/handle')
+
+    const cardFn = mockFetchOnce({ items: [], nextCursor: null })
+    await httpBackend.cardOperatorQueue('pending')
+    expect(cardFn.mock.calls[0][0]).toContain('/admin/moderation/queue?tab=pending')
+    expect(String(cardFn.mock.calls[0][0])).not.toContain('targetType=work')
+
+    const settingsFn = mockFetchOnce({ mode: 'review_first', updatedAt: null, updatedBy: null })
+    await httpBackend.moderationSettings()
+    expect(settingsFn.mock.calls[0][0]).toContain('/admin/moderation/settings')
   })
 })
