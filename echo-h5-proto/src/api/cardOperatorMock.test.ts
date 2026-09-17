@@ -23,4 +23,14 @@ describe('回忆卡运营 mock', () => {
     expect(next.mode).toBe('publish_first')
     expect(next.updatedAt).toBeTruthy()
   })
+
+  it('已公开可下架，不能直接恢复', () => {
+    const state = freshCardOps()
+    const open = mockCardOperatorQueue(state, 'handled').find((item) => item.cardStatus === 'public')
+    expect(open).toBeTruthy()
+    mockHandleCard(state, open!.moderationId, 'takedown', 'policy')
+    const after = mockCardOperatorQueue(state, 'handled').find((item) => item.moderationId === open!.moderationId)
+    expect(after?.cardStatus).toBe('takendown')
+    expect(() => mockHandleCard(state, open!.moderationId, 'takedown', 'policy')).toThrow()
+  })
 })
