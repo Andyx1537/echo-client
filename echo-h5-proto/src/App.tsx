@@ -357,7 +357,7 @@ export default function App() {
         />
       )
     }
-    if (openWorkId && !profileUserId && !profileImmersive && !immersive) {
+    if (openWorkId && !profileUserId && !profileImmersive && !immersive && !favoritesOpen && !worksOpen) {
       return (
         <WorkDetailScreen
           workId={openWorkId}
@@ -471,25 +471,53 @@ export default function App() {
     }
     if (favoritesOpen) {
       return (
-        <FavoritesScreen
-          guest={Boolean(me?.isGuest)}
-          onBack={() => setFavoritesOpen(false)}
-          onOpenWork={(id) => setOpenWorkId(id)}
-          onIdentityChanged={() => { void refreshMe() }}
-        />
+        <>
+          <div className={openWorkId ? 'overlay-hold' : 'overlay-page'} aria-hidden={Boolean(openWorkId)}>
+            <FavoritesScreen
+              guest={Boolean(me?.isGuest)}
+              onBack={() => setFavoritesOpen(false)}
+              onOpenWork={(id) => setOpenWorkId(id)}
+              onIdentityChanged={() => { void refreshMe() }}
+            />
+          </div>
+          {openWorkId ? (
+            <div className="overlay-front">
+              <WorkDetailScreen
+                workId={openWorkId}
+                guest={Boolean(me?.isGuest)}
+                onBack={() => setOpenWorkId(null)}
+                onIdentityChanged={() => { void refreshMe() }}
+              />
+            </div>
+          ) : null}
+        </>
       )
     }
     if (worksOpen) {
       return (
-        <WorksFeedScreen
-          authorId={me?.accountId}
-          self
-          title="我的作品"
-          onBack={() => setWorksOpen(false)}
-          onOpenPublish={() => setPublishOpen(true)}
-          onReviseWork={(work) => setReviseWork(work)}
-          onOpenWork={(work) => setOpenWorkId(work.id)}
-        />
+        <>
+          <div className={openWorkId ? 'overlay-hold' : 'overlay-page'} aria-hidden={Boolean(openWorkId)}>
+            <WorksFeedScreen
+              authorId={me?.accountId}
+              self
+              title="我的作品"
+              onBack={() => setWorksOpen(false)}
+              onOpenPublish={() => setPublishOpen(true)}
+              onReviseWork={(work) => setReviseWork(work)}
+              onOpenWork={(work) => setOpenWorkId(work.id)}
+            />
+          </div>
+          {openWorkId ? (
+            <div className="overlay-front">
+              <WorkDetailScreen
+                workId={openWorkId}
+                guest={Boolean(me?.isGuest)}
+                onBack={() => setOpenWorkId(null)}
+                onIdentityChanged={() => { void refreshMe() }}
+              />
+            </div>
+          ) : null}
+        </>
       )
     }
     if (spectrumOpen) return <SpectrumScreen onBack={() => setSpectrumOpen(false)} />
