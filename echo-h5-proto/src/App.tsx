@@ -88,7 +88,7 @@ export default function App() {
   const [favoritesOpen, setFavoritesOpen] = useState(false)
   const [openWorkId, setOpenWorkId] = useState<string | null>(null)
   const [immersive, setImmersive] = useState<{ items: Work[]; workId: string; reqId: string } | null>(null)
-  const [profileImmersive, setProfileImmersive] = useState<{ items: Work[]; workId: string } | null>(null)
+  const [profileImmersive, setProfileImmersive] = useState<{ items: Work[]; workId: string; reqId: string } | null>(null)
   const [plazaCategory, setPlazaCategory] = useState<NonNullable<Window['category']> | null>(null)
 
   // —— 进窗后连续下翻的「流上下文」（定案 D21 / 验收 TC-13）——
@@ -412,7 +412,18 @@ export default function App() {
                 key={profileUserId}
                 userId={profileUserId}
                 onBack={() => setProfileUserId(null)}
-                onOpenWork={(next, feed) => setProfileImmersive({ items: feed, workId: next.id })}
+                onOpenWork={(next, feed, fromReqId) => {
+                  setProfileImmersive({ items: feed, workId: next.id, reqId: '' })
+                  void api.openPlazaImmersive(fromReqId).then((session) => {
+                    setProfileImmersive((cur) =>
+                      cur && cur.workId === next.id
+                        ? { ...cur, reqId: session.reqId }
+                        : cur,
+                    )
+                  }).catch(() => {
+                    /* 快照没换成：进得去，不记 n */
+                  })
+                }}
               />
             </div>
           ) : null}
@@ -420,8 +431,9 @@ export default function App() {
             <WorkImmersiveScreen
               work={work}
               items={held.items}
+              reqId={held.reqId}
               onBack={() => setProfileImmersive(null)}
-              onChange={(next) => setProfileImmersive({ items: held.items, workId: next.id })}
+              onChange={(next) => setProfileImmersive({ items: held.items, workId: next.id, reqId: held.reqId })}
               onOpenComments={(next) => setOpenWorkId(next.id)}
               onOpenAuthor={(next) => {
                 setProfileImmersive(null)
