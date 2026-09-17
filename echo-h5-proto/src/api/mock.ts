@@ -1174,6 +1174,7 @@ export const mockBackend: EchoBackend = {
     const all = mockAuthorWorks(state, userId, userId === d.accountId)
     return {
       ...slicePage(all, cursor),
+      reqId: '',
       ...(userId === d.accountId ? { submissionCapability: mockSubmissionCapability(state, userId) } : {}),
     }
   },

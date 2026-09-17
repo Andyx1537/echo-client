@@ -329,6 +329,12 @@ describe('http 作品投稿名额', () => {
     })
   })
 
+  it('userWorks() 收下他人墙的网格 reqId', async () => {
+    mockFetchOnce({ items: [{ id: 'wk-1' }], nextCursor: null, reqId: 'wall-1' })
+    const res = await httpBackend.userWorks('acc_lin')
+    expect(res.reqId).toBe('wall-1')
+  })
+
   it('userWorks() 缺 capability 时不补算', async () => {
     mockFetchOnce({
       items: [{ id: 'wk-pending', status: 'pending' }],

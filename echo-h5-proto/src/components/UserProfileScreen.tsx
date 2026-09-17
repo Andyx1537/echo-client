@@ -7,7 +7,7 @@ import WorkCard from './WorkCard'
 interface Props {
   userId: string
   onBack: () => void
-  onOpenWork: (work: Work, feed: Work[]) => void
+  onOpenWork: (work: Work, feed: Work[], fromReqId: string) => void
 }
 
 /**
@@ -25,6 +25,7 @@ interface Props {
 export default function UserProfileScreen({ userId, onBack, onOpenWork }: Props) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [works, setWorks] = useState<Work[]>([])
+  const [reqIdByWork, setReqIdByWork] = useState<Record<string, string>>({})
   const [cursor, setCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -38,6 +39,7 @@ export default function UserProfileScreen({ userId, onBack, onOpenWork }: Props)
     let alive = true
     setLoading(true)
     setNotFound(false)
+    setReqIdByWork({})
     track('user_profile_open', { userId })
     Promise.all([api.userProfile(userId), api.userWorks(userId)])
       .then(([p, page]) => {
@@ -45,6 +47,13 @@ export default function UserProfileScreen({ userId, onBack, onOpenWork }: Props)
         setProfile(p)
         setWorks(page.items)
         setCursor(page.nextCursor)
+        if (page.reqId) {
+          const next: Record<string, string> = {}
+          for (const item of page.items) next[item.id] = page.reqId
+          setReqIdByWork(next)
+        } else {
+          setReqIdByWork({})
+        }
       })
       .catch(() => alive && setNotFound(true))
       .finally(() => alive && setLoading(false))
@@ -63,6 +72,13 @@ export default function UserProfileScreen({ userId, onBack, onOpenWork }: Props)
         const seen = new Set(cur.map((w) => w.id))
         return [...cur, ...page.items.filter((w) => !seen.has(w.id))]
       })
+      if (page.reqId) {
+        setReqIdByWork((cur) => {
+          const next = { ...cur }
+          for (const item of page.items) next[item.id] = page.reqId as string
+          return next
+        })
+      }
       setCursor(page.nextCursor)
     } catch {
       /* 续拉失败静默：保留已看到的作品，不弹技术错误脸 */
@@ -209,7 +225,7 @@ export default function UserProfileScreen({ userId, onBack, onOpenWork }: Props)
             {cols.map((col, ci) => (
               <div className="works-col" key={ci}>
                 {col.map((w) => (
-                  <WorkCard key={w.id} work={w} onOpen={() => onOpenWork(w, works)} />
+                  <WorkCard key={w.id} work={w} onOpen={() => onOpenWork(w, works, reqIdByWork[w.id] ?? '')} />
                 ))}
               </div>
             ))}
