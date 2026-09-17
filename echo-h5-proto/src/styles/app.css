@@ -2460,6 +2460,17 @@ button.wk-card:active,
 }
 .works-end { margin: 2px auto 22px; font-size: 12px; color: var(--ink-3); }
 
+.ops-desk {
+  min-height: 100vh;
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--cream);
+}
+.ops-desk-head { padding: 28px 18px 8px; }
+.ops-desk-kicker { margin: 0; font-size: 12px; letter-spacing: .08em; color: var(--ink-3); }
+.ops-desk-head h1 { margin: 6px 0 8px; font-size: 26px; }
+.ops-desk-sub { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.6; }
+.ops-desk-nav { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px 8px; }
 .ops-queue { background: var(--cream); }
 .ops-tabs {
   display: flex; flex-wrap: wrap; gap: 8px; padding: 0 18px 10px;

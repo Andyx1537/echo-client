@@ -37,7 +37,12 @@ body {
   padding: 24px;
 }
 
-button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+html.ops-root, html.ops-root body, html.ops-root #root { height: auto; min-height: 100%; }
+html.ops-root body {
+  display: block;
+  padding: 0;
+  background: var(--cream);
+}
 img { display: block; max-width: 100%; }
 
 ::-webkit-scrollbar { width: 0; height: 0; }

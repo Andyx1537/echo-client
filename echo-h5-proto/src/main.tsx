@@ -4,7 +4,7 @@ import App from './App'
 import PhoneFrame from './components/PhoneFrame'
 import PrivateOnboardingScreen from './components/PrivateOnboardingScreen'
 import PhoneLoginCoordinator from './components/PhoneLoginCoordinator'
-import WorkOperatorScreen from './components/WorkOperatorScreen'
+import OpsConsole from './components/OpsConsole'
 import './styles/global.css'
 
 const params = new URLSearchParams(location.search)
@@ -12,14 +12,13 @@ const params = new URLSearchParams(location.search)
 // 生产构建里 `import.meta.env.DEV` 恒为 false，整棵 dev 树会被摇掉。撤除方式见 docs/visual/README.md。
 const devVisual = import.meta.env.DEV ? params : null
 const VisualCompare = React.lazy(() => import('./dev/VisualCompare'))
-const opsWorks = params.get('ops') === 'works'
+const opsOpen = params.has('ops')
+if (opsOpen) document.documentElement.classList.add('ops-root')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <PhoneLoginCoordinator>{opsWorks ? (
-      <PhoneFrame>
-        <WorkOperatorScreen />
-      </PhoneFrame>
+    <PhoneLoginCoordinator>{opsOpen ? (
+      <OpsConsole />
     ) : devVisual?.has('onboarding') ? (
       <PhoneFrame>
         <PrivateOnboardingScreen onComplete={() => {}} onSkip={() => {}} onIdentityChanged={async () => {}} />

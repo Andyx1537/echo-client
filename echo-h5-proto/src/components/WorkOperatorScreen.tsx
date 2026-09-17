@@ -9,8 +9,12 @@ const TABS: { id: WorkOperatorTab; label: string }[] = [
   { id: 'takendown', label: '已下架' },
 ]
 
-/** 运营作品台。入口 `?ops=works`，不进 C 端底栏。 */
-export default function WorkOperatorScreen() {
+interface Props {
+  embedded?: boolean
+}
+
+/** 作品栏。单独打开或嵌在运营台里。 */
+export default function WorkOperatorScreen({ embedded = false }: Props) {
   const [tab, setTab] = useState<WorkOperatorTab>('pending')
   const [items, setItems] = useState<WorkOperatorTicket[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -62,8 +66,8 @@ export default function WorkOperatorScreen() {
   }
 
   return (
-    <div className="works ops-queue">
-      <div className="works-head">作品审核</div>
+    <div className={embedded ? 'ops-queue' : 'works ops-queue'}>
+      {!embedded && <div className="works-head">作品审核</div>}
       <div className="ops-tabs" role="tablist">
         {TABS.map((item) => (
           <button

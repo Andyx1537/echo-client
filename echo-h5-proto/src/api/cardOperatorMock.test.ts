@@ -1,0 +1,26 @@
+import { describe, expect, it } from 'vitest'
+import { freshCardOps, mockCardOperatorQueue, mockHandleCard, mockHandleCardAppeal, mockUpdateSettings } from './cardOperatorMock'
+
+describe('回忆卡运营 mock', () => {
+  it('待审通过后进已处置', () => {
+    const state = freshCardOps()
+    const first = mockCardOperatorQueue(state, 'pending')[0]
+    mockHandleCard(state, first.moderationId, 'approve')
+    expect(mockCardOperatorQueue(state, 'pending').some((item) => item.moderationId === first.moderationId)).toBe(false)
+    expect(mockCardOperatorQueue(state, 'handled').some((item) => item.moderationId === first.moderationId)).toBe(true)
+  })
+
+  it('申诉推翻回待审', () => {
+    const state = freshCardOps()
+    const open = mockCardOperatorQueue(state, 'appealing')[0]
+    mockHandleCardAppeal(state, open.moderationId, 'overturn')
+    expect(mockCardOperatorQueue(state, 'pending').some((item) => item.moderationId === open.moderationId)).toBe(true)
+  })
+
+  it('开关只记当前档', () => {
+    const state = freshCardOps()
+    const next = mockUpdateSettings(state, 'publish_first', 'me')
+    expect(next.mode).toBe('publish_first')
+    expect(next.updatedAt).toBeTruthy()
+  })
+})

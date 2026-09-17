@@ -34,6 +34,9 @@ import type {
   AppealWorkResult,
   WorkOperatorTicket,
   WorkOperatorHandleResult,
+  CardOperatorTicket,
+  CardOperatorHandleResult,
+  ModerationSettings,
   WorkComment,
   WorkCommentsPage,
   BehaviorEventInput,
@@ -366,4 +369,18 @@ export const httpBackend: EchoBackend = {
     post<WorkOperatorHandleResult>(`/admin/moderation/${encodeURIComponent(moderationId)}/handle`, input),
   handleWorkAppeal: (moderationId, input) =>
     post<WorkOperatorHandleResult>(`/admin/appeals/${encodeURIComponent(moderationId)}/handle`, input),
+  cardOperatorQueue: (tab = 'pending', cursor) =>
+    get<Paged<CardOperatorTicket>>(
+      `/admin/moderation/queue?tab=${encodeURIComponent(tab)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+    ),
+  handleCardModeration: (moderationId, action, reasonCode) =>
+    post<CardOperatorHandleResult>(`/admin/moderation/${encodeURIComponent(moderationId)}/handle`, {
+      action,
+      reasonCode,
+    }),
+  handleCardAppeal: (moderationId, action) =>
+    post<CardOperatorHandleResult>(`/admin/appeals/${encodeURIComponent(moderationId)}/handle`, { action }),
+  moderationSettings: () => get<ModerationSettings>('/admin/moderation/settings'),
+  updateModerationSettings: (mode) =>
+    patch<ModerationSettings>('/admin/moderation/settings', { mode }),
 }
