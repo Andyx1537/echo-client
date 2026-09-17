@@ -399,5 +399,19 @@ describe('http 作品运营台', () => {
     const settingsFn = mockFetchOnce({ mode: 'review_first', updatedAt: null, updatedBy: null })
     await httpBackend.moderationSettings()
     expect(settingsFn.mock.calls[0][0]).toContain('/admin/moderation/settings')
+
+    const cardTakeFn = mockFetchOnce({
+      moderationId: 'cmod-1',
+      cardId: 'card-1',
+      state: 'takendown',
+      cardStatus: 'takendown',
+      handledAt: 3,
+    })
+    await httpBackend.handleCardModeration('cmod-1', 'takedown', 'policy')
+    expect(cardTakeFn.mock.calls[0][0]).toContain('/admin/moderation/cmod-1/handle')
+    expect(JSON.parse(String(cardTakeFn.mock.calls[0][1].body))).toEqual({
+      action: 'takedown',
+      reasonCode: 'policy',
+    })
   })
 })

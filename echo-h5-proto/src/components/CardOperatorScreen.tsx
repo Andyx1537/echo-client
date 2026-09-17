@@ -30,7 +30,7 @@ export default function CardOperatorScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab])
 
-  async function act(item: CardOperatorTicket, kind: 'approve' | 'reject' | 'uphold' | 'overturn') {
+  async function act(item: CardOperatorTicket, kind: 'approve' | 'reject' | 'uphold' | 'overturn' | 'takedown') {
     if (busyId) return
     setBusyId(item.moderationId)
     setError(null)
@@ -38,7 +38,11 @@ export default function CardOperatorScreen() {
       if (kind === 'uphold' || kind === 'overturn') {
         await api.handleCardAppeal(item.moderationId, kind)
       } else {
-        await api.handleCardModeration(item.moderationId, kind, kind === 'reject' ? 'policy' : undefined)
+        await api.handleCardModeration(
+          item.moderationId,
+          kind,
+          kind === 'reject' || kind === 'takedown' ? 'policy' : undefined,
+        )
       }
       await load(tab, true)
     } catch (e) {
@@ -82,31 +86,71 @@ export default function CardOperatorScreen() {
               <p className="wk-title">{item.cardSnapshot?.title || '没有标题'}</p>
               <p className="wk-excerpt">{item.cardSnapshot?.body || ''}</p>
               <p className="ops-meta">
-                {item.cardStatus === 'appealing' ? '申诉中' : item.cardStatus === 'public' ? '已公开' : '已提交'}
+                {cardStatusLabel(item)}
                 {item.originType === 'official' ? ' · 官方号' : ''}
                 {item.appeal?.appealAt ? ' · 已申诉' : ''}
                 {' · '}{item.submitBy}
               </p>
               {item.appeal?.text && <p className="ops-appeal">{item.appeal.text}</p>}
-              {tab !== 'handled' && (
-                <div className="ops-actions">
-                  {tab === 'pending' ? (
-                    <>
-                      <button type="button" className="ops-btn primary" disabled={busyId === item.moderationId} onClick={() => void act(item, 'approve')}>通过</button>
-                      <button type="button" className="ops-btn" disabled={busyId === item.moderationId} onClick={() => void act(item, 'reject')}>先不公开</button>
-                    </>
-                  ) : (
-                    <>
-                      <button type="button" className="ops-btn" disabled={busyId === item.moderationId} onClick={() => void act(item, 'uphold')}>维持原判</button>
-                      <button type="button" className="ops-btn primary" disabled={busyId === item.moderationId} onClick={() => void act(item, 'overturn')}>回到待审</button>
-                    </>
-                  )}
-                </div>
-              )}
+              <CardActions tab={tab} item={item} busyId={busyId} onAct={act} />
             </li>
           ))}
         </ul>
       )}
+    </div>
+  )
+}
+
+function cardStatusLabel(item: CardOperatorTicket): string {
+  if (item.cardStatus === 'appealing') return '申诉中'
+  if (item.cardStatus === 'public') return '已公开'
+  if (item.cardStatus === 'takendown') return '已下架'
+  if (item.cardStatus === 'rejected') return '未公开'
+  return '已提交'
+}
+
+function CardActions({
+  tab,
+  item,
+  busyId,
+  onAct,
+}: {
+  tab: CardOperatorTab
+  item: CardOperatorTicket
+  busyId: string | null
+  onAct: (item: CardOperatorTicket, kind: 'approve' | 'reject' | 'uphold' | 'overturn' | 'takedown') => void
+}) {
+  const busy = busyId === item.moderationId
+  if (tab === 'handled') {
+    if (item.cardStatus !== 'public') return null
+    return (
+      <div className="ops-actions">
+        <button type="button" className="ops-btn" disabled={busy} onClick={() => void onAct(item, 'takedown')}>
+          先收起来
+        </button>
+      </div>
+    )
+  }
+  if (tab === 'appealing') {
+    return (
+      <div className="ops-actions">
+        <button type="button" className="ops-btn" disabled={busy} onClick={() => void onAct(item, 'uphold')}>
+          维持原判
+        </button>
+        <button type="button" className="ops-btn primary" disabled={busy} onClick={() => void onAct(item, 'overturn')}>
+          回到待审
+        </button>
+      </div>
+    )
+  }
+  return (
+    <div className="ops-actions">
+      <button type="button" className="ops-btn primary" disabled={busy} onClick={() => void onAct(item, 'approve')}>
+        通过
+      </button>
+      <button type="button" className="ops-btn" disabled={busy} onClick={() => void onAct(item, 'reject')}>
+        先不公开
+      </button>
     </div>
   )
 }
