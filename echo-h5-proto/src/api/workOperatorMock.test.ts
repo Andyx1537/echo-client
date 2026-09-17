@@ -86,6 +86,15 @@ describe('作品运营台 mock', () => {
     expect(mockWorkOperatorQueue(state, 'public').some((item) => item.moderationId === first.moderationId)).toBe(true)
   })
 
+  it('超时只信服务端字段，待审一条已超时，已处置没有', () => {
+    const state = freshWorks('me')
+    const overdue = mockWorkOperatorQueue(state, 'pending').find((item) => item.slaBreached)
+    expect(overdue?.workId).toBe('wk_ops_pending_1')
+    expect(overdue?.slaBreached).toBe(true)
+    expect(mockWorkOperatorQueue(state, 'public').every((item) => item.slaBreached !== true)).toBe(true)
+    expect(mockWorkOperatorQueue(state, 'takendown').every((item) => item.slaBreached !== true)).toBe(true)
+  })
+
   it('版本对不上就拒绝写', () => {
     const state = freshWorks('me')
     const first = mockWorkOperatorQueue(state, 'pending')[0]

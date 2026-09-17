@@ -337,6 +337,7 @@ export interface MockWorkTicket {
   appealAt?: number
   appealResult?: string
   appealHandledAt?: number
+  slaBreached?: boolean
 }
 
 export interface WorksMockState {
@@ -869,7 +870,7 @@ function seedOperatorWorks(now: number): { works: MockWork[]; tickets: MockWorkT
   return {
     works: [pendingA, pendingB, appealing, down],
     tickets: [
-      queuedTicket('mod_ops_pending_1', OPS_PENDING_A, 'acc_ops_a', 1, now - 18 * 60_000),
+      { ...queuedTicket('mod_ops_pending_1', OPS_PENDING_A, 'acc_ops_a', 1, now - 18 * 60_000), slaBreached: true },
       queuedTicket('mod_ops_pending_2', OPS_PENDING_B, 'acc_ops_b', 1, now - 40 * 60_000),
       {
         moderationId: 'mod_ops_appealing_1',
@@ -1053,6 +1054,7 @@ function toOperatorTicket(ticket: MockWorkTicket, work?: Work): WorkOperatorTick
     workStatus: work?.status,
     reviewedAt: (work as MockWork | undefined)?.reviewedAt ?? null,
     createdAt: ticket.createdAt,
+    slaBreached: ticket.slaBreached === true,
     note: ticket.note ?? null,
     handledAt: ticket.handledAt ?? null,
     reasonCode: ticket.reasonCode ?? null,

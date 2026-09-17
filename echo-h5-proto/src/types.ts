@@ -890,6 +890,8 @@ export interface WorkOperatorTicket {
   originType?: string
   reviewedAt?: number | null
   createdAt: number
+  slaDueAt?: number
+  slaBreached?: boolean
   note?: string | null
   handledBy?: string | null
   handledAt?: number | null
