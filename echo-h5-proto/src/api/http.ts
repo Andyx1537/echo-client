@@ -32,6 +32,8 @@ import type {
   ResubmitWorkResult,
   WorkModeration,
   AppealWorkResult,
+  WorkOperatorTicket,
+  WorkOperatorHandleResult,
   WorkComment,
   WorkCommentsPage,
   BehaviorEventInput,
@@ -354,4 +356,14 @@ export const httpBackend: EchoBackend = {
     del<AdaptationProfile>(`/me/adaptation-profile?scope=${encodeURIComponent(scope)}`),
   setRecommendationMode: (mode: AdaptationProfile['recommendationMode']) =>
     put<AdaptationProfile>('/me/recommendation-mode', { mode }),
+  workOperatorQueue: (tab = 'pending', cursor) =>
+    get<Paged<WorkOperatorTicket>>(
+      `/admin/moderation/queue?targetType=work${tab === 'appealing' ? '&tab=appealing' : ''}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+    ),
+  workOperatorDetail: (moderationId) =>
+    get<WorkOperatorTicket>(`/admin/moderation/${encodeURIComponent(moderationId)}`),
+  handleWorkModeration: (moderationId, input) =>
+    post<WorkOperatorHandleResult>(`/admin/moderation/${encodeURIComponent(moderationId)}/handle`, input),
+  handleWorkAppeal: (moderationId, input) =>
+    post<WorkOperatorHandleResult>(`/admin/appeals/${encodeURIComponent(moderationId)}/handle`, input),
 }

@@ -7,7 +7,25 @@
 //    瀑布流要判的就是高低错落，样本全挤在同一个比例里，
 //    有没有按真实宽高排版会长得一模一样。
 
-import type { AppealWorkResult, DraftWorkInput, PublishWorkInput, PublishWorkResult, ResubmitWorkResult, ReviewMode, SubmissionCapability, SubmissionNextAction, Work, WorkModeration } from '../types'
+import type {
+  AppealWorkResult,
+  DraftWorkInput,
+  PublishWorkInput,
+  PublishWorkResult,
+  ResubmitWorkResult,
+  ReviewMode,
+  SubmissionCapability,
+  SubmissionNextAction,
+  Work,
+  WorkAppealHandleInput,
+  WorkModeration,
+  WorkOperatorHandleInput,
+  WorkOperatorHandleResult,
+  WorkOperatorTab,
+  WorkOperatorTicket,
+  WorkStatus,
+  WorkTicketState,
+} from '../types'
 import { assetUrl } from '../lib/assetUrl'
 
 const OCCUPYING = new Set(['pending', 'uploading', 'submitting'])
@@ -303,9 +321,28 @@ export interface MockReviewEvidence {
   consumedByWorkId?: string
 }
 
+export interface MockWorkTicket {
+  moderationId: string
+  workId: string
+  submitBy: string
+  state: WorkTicketState
+  stateVersion: number
+  contentVersion: number
+  createdAt: number
+  reasonCode?: string
+  note?: string
+  handledAt?: number
+  preAppealStatus?: WorkStatus
+  appealText?: string
+  appealAt?: number
+  appealResult?: string
+  appealHandledAt?: number
+}
+
 export interface WorksMockState {
   works: Work[]
   evidences: MockReviewEvidence[]
+  tickets: MockWorkTicket[]
 }
 
 /** 浏览器对照「原样复用」用。撤：去掉 App 的 fromCard 查询和这里的常量。 */
@@ -316,6 +353,7 @@ export const REUSE_DEMO_BODY = '阳光从阳台斜进来，它就趴在那块地
 export const REUSE_DEMO_MEDIA = assetUrl('seed-covers/cover-pet-nap.jpg')
 
 export function freshWorks(myAccountId: string): WorksMockState {
+  const now = Date.now()
   const works = buildSeed()
   // 🔴 分两条挂到当前用户名下：一条已公开、一条未通过。
   //    未通过不占投稿名额，才能同时验「还能发新的」和「同一条改完再提」。
@@ -328,7 +366,11 @@ export function freshWorks(myAccountId: string): WorksMockState {
     contentVersion: 1,
     nextAction: 'edit',
     submittedContentVersion: 1,
+    moderationId: 'mod_seed_rejected',
+    handledAt: now - 80 * 60_000,
   } as MockWork
+  const ops = seedOperatorWorks(now)
+  works.push(...ops.works)
   const reuseHash = mockReviewHash({
     mediaType: 'image',
     mediaKey: REUSE_DEMO_MEDIA,
@@ -347,6 +389,20 @@ export function freshWorks(myAccountId: string): WorksMockState {
       policyEpoch: 1,
       aigcLabelReady: true,
     }],
+    tickets: [
+      {
+        moderationId: 'mod_seed_rejected',
+        workId: works[4].id,
+        submitBy: myAccountId,
+        state: 'rejected',
+        stateVersion: 2,
+        contentVersion: 1,
+        createdAt: now - 90 * 60_000,
+        reasonCode: 'policy',
+        handledAt: now - 80 * 60_000,
+      },
+      ...ops.tickets,
+    ],
   }
 }
 
@@ -395,6 +451,11 @@ export function mockPublish(
   if (reused && decision.evidence) {
     decision.evidence.consumedByWorkId = work.id
     work.reviewMode = 'reused'
+  }
+  if (!reused) {
+    const moderationId = `mod_${work.id}`
+    ;(work as MockWork).moderationId = moderationId
+    state.tickets.push(queuedTicket(moderationId, work.id, authorId, 1, Date.now()))
   }
   state.works = [work, ...state.works]
   return {
@@ -504,6 +565,7 @@ export function mockResubmit(
     moderationId,
   }
   state.works = state.works.map((work) => (work.id === workId ? next : work))
+  state.tickets.push(queuedTicket(moderationId, workId, authorId, nextVersion, Date.now()))
   return {
     workId,
     contentVersion: nextVersion,
@@ -573,11 +635,34 @@ export function mockAppealWork(
     throw Object.assign(new Error('这条现在还不需要申诉。'), { code: 3411, detail: 'appeal_not_applicable' })
   }
   const now = Date.now()
+  const previous: WorkStatus = current.status === 'takendown' ? 'takendown' : 'rejected'
   current.status = 'appealing'
   current.nextAction = 'none'
   current.appealAt = now
   current.appealText = trimmed
   current.moderationId = current.moderationId ?? `mod_${now}`
+  const ticket = lastTicket(state, workId)
+  if (ticket) {
+    ticket.preAppealStatus = previous
+    ticket.state = 'appealing'
+    ticket.stateVersion += 1
+    ticket.appealAt = now
+    ticket.appealText = trimmed
+    current.moderationId = ticket.moderationId
+  } else {
+    state.tickets.push({
+      moderationId: current.moderationId,
+      workId,
+      submitBy: authorId,
+      state: 'appealing',
+      stateVersion: 2,
+      contentVersion: current.contentVersion ?? 1,
+      createdAt: now,
+      preAppealStatus: 'rejected',
+      appealAt: now,
+      appealText: trimmed,
+    })
+  }
   return {
     appealId: current.moderationId,
     state: 'appealing',
@@ -727,4 +812,345 @@ export function mockSubmissionCapability(state: WorksMockState, authorId: string
     blockingStatus: blocking.status ?? 'pending',
     nextAction: 'wait',
   }
+}
+
+const OPS_PENDING_A = 'wk_ops_pending_1'
+const OPS_PENDING_B = 'wk_ops_pending_2'
+const OPS_APPEALING = 'wk_ops_appealing_1'
+
+function seedOperatorWorks(now: number): { works: MockWork[]; tickets: MockWorkTicket[] } {
+  const pendingA = operatorWork(OPS_PENDING_A, 'acc_ops_a', '门口那双鞋还在', '下雨天它会先踩进右边那只。', now - 18 * 60_000)
+  const pendingB = operatorWork(OPS_PENDING_B, 'acc_ops_b', '窗台上的空碗', '我还是会倒一点水进去。', now - 40 * 60_000)
+  const appealing = operatorWork(OPS_APPEALING, 'acc_ops_c', '钥匙串少了一把', '那把是它的，一直没补。', now - 120 * 60_000)
+  appealing.status = 'appealing'
+  appealing.nextAction = 'none'
+  appealing.moderationId = 'mod_ops_appealing_1'
+  appealing.appealAt = now - 30 * 60_000
+  appealing.appealText = '请再看一眼，这是它留下的。'
+  pendingA.moderationId = 'mod_ops_pending_1'
+  pendingB.moderationId = 'mod_ops_pending_2'
+  return {
+    works: [pendingA, pendingB, appealing],
+    tickets: [
+      queuedTicket('mod_ops_pending_1', OPS_PENDING_A, 'acc_ops_a', 1, now - 18 * 60_000),
+      queuedTicket('mod_ops_pending_2', OPS_PENDING_B, 'acc_ops_b', 1, now - 40 * 60_000),
+      {
+        moderationId: 'mod_ops_appealing_1',
+        workId: OPS_APPEALING,
+        submitBy: 'acc_ops_c',
+        state: 'appealing',
+        stateVersion: 3,
+        contentVersion: 1,
+        createdAt: now - 120 * 60_000,
+        reasonCode: 'policy',
+        handledAt: now - 50 * 60_000,
+        preAppealStatus: 'rejected',
+        appealAt: now - 30 * 60_000,
+        appealText: appealing.appealText,
+      },
+    ],
+  }
+}
+
+function operatorWork(id: string, authorId: string, title: string, body: string, createdAt: number): MockWork {
+  return {
+    id,
+    authorId,
+    mediaType: 'image',
+    mediaUrl: assetUrl('seed-covers/cover-daily-mug.jpg'),
+    posterUrl: '',
+    durationMs: 0,
+    width: 1000,
+    height: 1250,
+    title,
+    excerpt: body.slice(0, 40),
+    topicIds: [],
+    publishedAt: createdAt,
+    aiGenerated: false,
+    fromCard: false,
+    sourceType: 'user_upload',
+    status: 'pending',
+    visibility: 'public',
+    body,
+    createdAt,
+    contentVersion: 1,
+    nextAction: 'wait',
+    submittedContentVersion: 1,
+  }
+}
+
+function queuedTicket(
+  moderationId: string,
+  workId: string,
+  submitBy: string,
+  contentVersion: number,
+  createdAt: number,
+): MockWorkTicket {
+  return {
+    moderationId,
+    workId,
+    submitBy,
+    state: 'queued',
+    stateVersion: 1,
+    contentVersion,
+    createdAt,
+  }
+}
+
+export function ensureOperatorSeeds(state: WorksMockState): void {
+  if (!state.tickets) state.tickets = []
+  const known = new Set(state.works.map((work) => work.id))
+  const extra = seedOperatorWorks(Date.now())
+  for (const work of extra.works) {
+    if (!known.has(work.id)) state.works.push(work)
+  }
+  const ticketIds = new Set(state.tickets.map((ticket) => ticket.moderationId))
+  for (const ticket of extra.tickets) {
+    if (!ticketIds.has(ticket.moderationId)) state.tickets.push(ticket)
+  }
+  if (state.tickets.length === extra.tickets.length) {
+    const derived = deriveTickets(state.works)
+    for (const ticket of derived) {
+      if (!state.tickets.some((item) => item.workId === ticket.workId)) {
+        state.tickets.push(ticket)
+      }
+    }
+  }
+}
+
+function deriveTickets(works: Work[]): MockWorkTicket[] {
+  const now = Date.now()
+  return works.flatMap((work, index) => {
+    const mock = work as MockWork
+    if (work.status === 'pending') {
+      return [queuedTicket(mock.moderationId ?? `mod_${work.id}`, work.id, work.authorId, work.contentVersion ?? 1, work.createdAt ?? now - index)]
+    }
+    if (work.status === 'appealing') {
+      return [{
+        moderationId: mock.moderationId ?? `mod_${work.id}`,
+        workId: work.id,
+        submitBy: work.authorId,
+        state: 'appealing' as const,
+        stateVersion: 2,
+        contentVersion: work.contentVersion ?? 1,
+        createdAt: work.createdAt ?? now,
+        preAppealStatus: 'rejected' as const,
+        appealAt: mock.appealAt,
+        appealText: mock.appealText,
+      }]
+    }
+    if (work.status === 'rejected') {
+      return [{
+        moderationId: mock.moderationId ?? `mod_${work.id}`,
+        workId: work.id,
+        submitBy: work.authorId,
+        state: 'rejected' as const,
+        stateVersion: 2,
+        contentVersion: work.contentVersion ?? 1,
+        createdAt: work.createdAt ?? now,
+        reasonCode: 'policy',
+        handledAt: mock.handledAt,
+      }]
+    }
+    return []
+  })
+}
+
+function lastTicket(state: WorksMockState, workId: string): MockWorkTicket | undefined {
+  return [...state.tickets].reverse().find((ticket) => ticket.workId === workId)
+}
+
+function ticketById(state: WorksMockState, moderationId: string): MockWorkTicket | undefined {
+  return state.tickets.find((ticket) => ticket.moderationId === moderationId)
+}
+
+function toOperatorTicket(ticket: MockWorkTicket, work?: Work): WorkOperatorTicket {
+  return {
+    moderationId: ticket.moderationId,
+    targetType: 'work',
+    targetId: ticket.workId,
+    workId: ticket.workId,
+    submitBy: ticket.submitBy,
+    state: ticket.state,
+    stateVersion: ticket.stateVersion,
+    contentVersion: ticket.contentVersion,
+    workSnapshot: work
+      ? { title: work.title, body: work.body ?? work.excerpt, mediaKey: work.mediaUrl, coverUrl: work.mediaUrl }
+      : undefined,
+    workStatus: work?.status,
+    reviewedAt: (work as MockWork | undefined)?.reviewedAt ?? null,
+    createdAt: ticket.createdAt,
+    note: ticket.note ?? null,
+    handledAt: ticket.handledAt ?? null,
+    reasonCode: ticket.reasonCode ?? null,
+    appeal: ticket.appealAt
+      ? {
+          appealId: ticket.moderationId,
+          text: ticket.appealText,
+          appealAt: ticket.appealAt,
+          result: ticket.appealResult ?? null,
+          handledAt: ticket.appealHandledAt ?? null,
+        }
+      : null,
+  }
+}
+
+export function mockWorkOperatorQueue(
+  state: WorksMockState,
+  tab: WorkOperatorTab = 'pending',
+): WorkOperatorTicket[] {
+  ensureOperatorSeeds(state)
+  const appealing = tab === 'appealing'
+  return state.tickets
+    .filter((ticket) => (appealing ? ticket.state === 'appealing' : ticket.state === 'queued' || ticket.state === 'assigned' || ticket.state === 'reviewing'))
+    .sort((a, b) => a.createdAt - b.createdAt || a.moderationId.localeCompare(b.moderationId))
+    .map((ticket) => toOperatorTicket(ticket, state.works.find((work) => work.id === ticket.workId)))
+}
+
+export function mockWorkOperatorDetail(state: WorksMockState, moderationId: string): WorkOperatorTicket {
+  ensureOperatorSeeds(state)
+  const ticket = ticketById(state, moderationId)
+  if (!ticket) {
+    throw Object.assign(new Error('这里还空着，没找到你要的内容。'), { code: 2004 })
+  }
+  return toOperatorTicket(ticket, state.works.find((work) => work.id === ticket.workId))
+}
+
+export function mockHandleWorkModeration(
+  state: WorksMockState,
+  moderationId: string,
+  input: WorkOperatorHandleInput,
+): WorkOperatorHandleResult {
+  ensureOperatorSeeds(state)
+  const ticket = ticketById(state, moderationId)
+  const work = ticket ? state.works.find((item) => item.id === ticket.workId) as MockWork | undefined : undefined
+  if (!ticket || !work) {
+    throw Object.assign(new Error('这里还空着，没找到你要的内容。'), { code: 2004 })
+  }
+  if (ticket.stateVersion !== input.expectedStateVersion) {
+    throw Object.assign(new Error('这条已经有人处理过了，刷新看看？'), {
+      code: 3409,
+      detail: 'moderation_state_conflict',
+    })
+  }
+  if ((input.action === 'reject' || input.action === 'takedown') && !input.reasonCode) {
+    throw Object.assign(new Error('还差一个处置理由，选一个就好。'), { code: 2001, detail: 'reason_code_required' })
+  }
+  const now = Date.now()
+  if (input.action === 'approve') {
+    if (ticket.state !== 'queued' && ticket.state !== 'assigned' && ticket.state !== 'reviewing') {
+      throw conflict()
+    }
+    if (work.status !== 'pending') throw conflict()
+    work.status = 'public'
+    work.nextAction = 'none'
+    work.reviewedAt = work.reviewedAt ?? now
+    work.handledAt = now
+    ticket.state = 'approved'
+  } else if (input.action === 'reject') {
+    if (ticket.state !== 'queued' && ticket.state !== 'assigned' && ticket.state !== 'reviewing') {
+      throw conflict()
+    }
+    if (work.status !== 'pending') throw conflict()
+    work.status = 'rejected'
+    work.nextAction = 'edit'
+    work.handledAt = now
+    ticket.state = 'rejected'
+    ticket.reasonCode = input.reasonCode
+  } else if (input.action === 'takedown') {
+    if (ticket.state !== 'approved' || work.status !== 'public') throw conflict()
+    work.status = 'takendown'
+    work.nextAction = 'none'
+    work.handledAt = now
+    ticket.state = 'takendown'
+    ticket.reasonCode = input.reasonCode
+  } else if (input.action === 'restore') {
+    if (ticket.state !== 'takendown' || work.status !== 'takendown') throw conflict()
+    work.status = 'public'
+    work.nextAction = 'none'
+    work.handledAt = now
+    ticket.state = 'approved'
+  } else {
+    throw Object.assign(new Error('这个动作暂时用不了，换个方式试试？'), { code: 2001, detail: 'unknown action' })
+  }
+  ticket.stateVersion += 1
+  ticket.handledAt = now
+  ticket.note = input.note
+  return {
+    moderationId: ticket.moderationId,
+    workId: work.id,
+    targetType: 'work',
+    state: ticket.state,
+    workStatus: work.status ?? 'pending',
+    reviewedAt: work.reviewedAt ?? null,
+    handledAt: now,
+    stateVersion: ticket.stateVersion,
+  }
+}
+
+export function mockHandleWorkAppeal(
+  state: WorksMockState,
+  moderationId: string,
+  input: WorkAppealHandleInput,
+): WorkOperatorHandleResult {
+  ensureOperatorSeeds(state)
+  const ticket = ticketById(state, moderationId)
+  const work = ticket ? state.works.find((item) => item.id === ticket.workId) as MockWork | undefined : undefined
+  if (!ticket || !work) {
+    throw Object.assign(new Error('这里还空着，没找到你要的内容。'), { code: 2004 })
+  }
+  if (ticket.stateVersion !== input.expectedStateVersion) {
+    throw Object.assign(new Error('这条已经有人处理过了，刷新看看？'), {
+      code: 3409,
+      detail: 'moderation_state_conflict',
+    })
+  }
+  if (ticket.state !== 'appealing' || work.status !== 'appealing') {
+    throw conflict()
+  }
+  const now = Date.now()
+  if (input.action === 'uphold') {
+    const back = ticket.preAppealStatus === 'takendown' ? 'takendown' : 'rejected'
+    work.status = back
+    work.nextAction = back === 'rejected' ? 'edit' : 'none'
+    ticket.state = back
+    ticket.appealResult = 'upheld'
+  } else if (input.action === 'overturn') {
+    const occupying = mockSubmissionCapability(state, work.authorId)
+    if (!occupying.canSubmitWork && occupying.blockingWorkId !== work.id) {
+      throw Object.assign(new Error('还有一条作品正在处理，先等它走完再改这一条。'), {
+        code: 3002,
+        detail: 'submission_slot_occupied',
+      })
+    }
+    work.status = 'pending'
+    work.nextAction = 'wait'
+    ticket.state = 'queued'
+    ticket.appealResult = 'overturned'
+  } else {
+    throw Object.assign(new Error('这个动作暂时用不了，换个方式试试？'), { code: 2001, detail: 'unknown appeal action' })
+  }
+  ticket.stateVersion += 1
+  ticket.appealHandledAt = now
+  ticket.handledAt = now
+  ticket.note = input.note
+  work.handledAt = now
+  return {
+    moderationId: ticket.moderationId,
+    workId: work.id,
+    targetType: 'work',
+    state: ticket.state,
+    workStatus: work.status ?? 'pending',
+    reviewedAt: work.reviewedAt ?? null,
+    handledAt: now,
+    stateVersion: ticket.stateVersion,
+    appealId: ticket.moderationId,
+  }
+}
+
+function conflict(): never {
+  throw Object.assign(new Error('这条已经有人处理过了，刷新看看？'), {
+    code: 3409,
+    detail: 'moderation_state_conflict',
+  })
 }
