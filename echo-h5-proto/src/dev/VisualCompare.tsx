@@ -340,7 +340,7 @@ function AuthorHomeWall({ plan }: { plan: 'windows' | 'works' }) {
   )
 }
 
-function AuthorHomeHold({ kept }: { kept: boolean }) {
+function AuthorHomeHold({ kept, from }: { kept: boolean; from?: 'wall' | 'comments' }) {
   const works = authorHomeWorks()
   const scroller = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -348,7 +348,7 @@ function AuthorHomeHold({ kept }: { kept: boolean }) {
   }, [kept])
   return (
     <div className="vc-page">
-      <p className="vc-label">从墙上回来 · {kept ? '主页还挂着' : '卸掉再挂'}</p>
+      <p className="vc-label">{from === 'comments' ? '评论回来再回主页' : '从墙上回来'} · {kept ? '主页还挂着' : '卸掉再挂'}</p>
       <PhoneFrame>
         <div className="uprofile" ref={scroller}>
           <div className="friend-topbar">
@@ -542,6 +542,15 @@ export default function VisualCompare({ params }: { params: URLSearchParams }) {
     )
   }
 
+  if (which === 'profile-comments-hold') {
+    return (
+      <div className="vc-pair">
+        <AuthorHomeHold kept={false} from="comments" />
+        <AuthorHomeHold kept={true} from="comments" />
+      </div>
+    )
+  }
+
   if (which === 'work-appeal') {
     const plan = params.get('plan')
     if (plan === 'sheet') {
@@ -575,6 +584,7 @@ export default function VisualCompare({ params }: { params: URLSearchParams }) {
         <li><a href="?visual=work-immersive">广场点进去 · 详情 vs 全屏单卡</a></li>
         <li><a href="?visual=author-home">作者主页 · 还在读窗 vs 改读作品</a></li>
         <li><a href="?visual=author-home-hold">从墙上回来 · 卸掉再挂 vs 主页还挂着</a></li>
+        <li><a href="?visual=profile-comments-hold">评论回来再回主页 · 卸掉再挂 vs 主页还挂着</a></li>
         <li><a href="?visual=work-appeal">我的作品 · 未通过有没有「看看为什么」</a></li>
         <li><a href="?visual=work-appeal&plan=appealing">我的作品 · 申诉中</a></li>
         <li><a href="?visual=work-appeal&plan=sheet">看看为什么 · 可申 vs 已申</a></li>
