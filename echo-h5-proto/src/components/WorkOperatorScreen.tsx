@@ -100,7 +100,9 @@ export default function WorkOperatorScreen({ embedded = false }: Props) {
               <p className="wk-title">{item.workSnapshot?.title || '没有标题'}</p>
               <p className="wk-excerpt">{item.workSnapshot?.body || ''}</p>
               <p className="ops-meta">
-                {statusLabel(item)} · {item.submitBy}
+                {statusLabel(item)}
+                {item.slaBreached === true ? ' · 已超时' : ''}
+                {' · '}{item.submitBy}
               </p>
               {item.appeal?.text && <p className="ops-appeal">{item.appeal.text}</p>}
               <div className="ops-actions">{actions(tab, item, busyId, act)}</div>
