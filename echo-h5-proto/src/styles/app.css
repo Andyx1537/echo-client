@@ -2462,7 +2462,7 @@ button.wk-card:active,
 
 .ops-queue { background: var(--cream); }
 .ops-tabs {
-  display: flex; gap: 8px; padding: 0 18px 10px;
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 0 18px 10px;
 }
 .ops-tab {
   padding: 6px 14px; border-radius: 14px;

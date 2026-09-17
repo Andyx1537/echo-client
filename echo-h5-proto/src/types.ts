@@ -856,7 +856,7 @@ export interface AppealWorkResult {
 }
 
 /** GET /admin/moderation/queue?targetType=work 单条。 */
-export type WorkOperatorTab = 'pending' | 'appealing'
+export type WorkOperatorTab = 'pending' | 'appealing' | 'public' | 'takendown'
 export type WorkTicketState =
   | 'queued'
   | 'assigned'

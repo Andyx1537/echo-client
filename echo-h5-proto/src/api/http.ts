@@ -358,7 +358,7 @@ export const httpBackend: EchoBackend = {
     put<AdaptationProfile>('/me/recommendation-mode', { mode }),
   workOperatorQueue: (tab = 'pending', cursor) =>
     get<Paged<WorkOperatorTicket>>(
-      `/admin/moderation/queue?targetType=work${tab === 'appealing' ? '&tab=appealing' : ''}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+      `/admin/moderation/queue?targetType=work${tab !== 'pending' ? `&tab=${encodeURIComponent(tab)}` : ''}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
     ),
   workOperatorDetail: (moderationId) =>
     get<WorkOperatorTicket>(`/admin/moderation/${encodeURIComponent(moderationId)}`),

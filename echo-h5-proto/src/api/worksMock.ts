@@ -357,7 +357,15 @@ export function freshWorks(myAccountId: string): WorksMockState {
   const works = buildSeed()
   // 🔴 分两条挂到当前用户名下：一条已公开、一条未通过。
   //    未通过不占投稿名额，才能同时验「还能发新的」和「同一条改完再提」。
-  works[1] = { ...works[1], authorId: myAccountId, status: 'public', visibility: 'public' }
+  works[1] = {
+    ...works[1],
+    authorId: myAccountId,
+    status: 'public',
+    visibility: 'public',
+    moderationId: 'mod_seed_public',
+    reviewedAt: now - 200 * 60_000,
+    handledAt: now - 200 * 60_000,
+  } as MockWork
   works[4] = {
     ...works[4],
     authorId: myAccountId,
@@ -390,6 +398,16 @@ export function freshWorks(myAccountId: string): WorksMockState {
       aigcLabelReady: true,
     }],
     tickets: [
+      {
+        moderationId: 'mod_seed_public',
+        workId: works[1].id,
+        submitBy: myAccountId,
+        state: 'approved',
+        stateVersion: 2,
+        contentVersion: 1,
+        createdAt: now - 210 * 60_000,
+        handledAt: now - 200 * 60_000,
+      },
       {
         moderationId: 'mod_seed_rejected',
         workId: works[4].id,
@@ -452,9 +470,21 @@ export function mockPublish(
     decision.evidence.consumedByWorkId = work.id
     work.reviewMode = 'reused'
   }
-  if (!reused) {
-    const moderationId = `mod_${work.id}`
-    ;(work as MockWork).moderationId = moderationId
+  const moderationId = `mod_${work.id}`
+  ;(work as MockWork).moderationId = moderationId
+  if (reused) {
+    ;(work as MockWork).reviewedAt = Date.now()
+    state.tickets.push({
+      moderationId,
+      workId: work.id,
+      submitBy: authorId,
+      state: 'approved',
+      stateVersion: 1,
+      contentVersion: 1,
+      createdAt: Date.now(),
+      handledAt: Date.now(),
+    })
+  } else {
     state.tickets.push(queuedTicket(moderationId, work.id, authorId, 1, Date.now()))
   }
   state.works = [work, ...state.works]
@@ -817,20 +847,27 @@ export function mockSubmissionCapability(state: WorksMockState, authorId: string
 const OPS_PENDING_A = 'wk_ops_pending_1'
 const OPS_PENDING_B = 'wk_ops_pending_2'
 const OPS_APPEALING = 'wk_ops_appealing_1'
+const OPS_DOWN = 'wk_ops_down_1'
 
 function seedOperatorWorks(now: number): { works: MockWork[]; tickets: MockWorkTicket[] } {
   const pendingA = operatorWork(OPS_PENDING_A, 'acc_ops_a', '门口那双鞋还在', '下雨天它会先踩进右边那只。', now - 18 * 60_000)
   const pendingB = operatorWork(OPS_PENDING_B, 'acc_ops_b', '窗台上的空碗', '我还是会倒一点水进去。', now - 40 * 60_000)
   const appealing = operatorWork(OPS_APPEALING, 'acc_ops_c', '钥匙串少了一把', '那把是它的，一直没补。', now - 120 * 60_000)
+  const down = operatorWork(OPS_DOWN, 'acc_ops_d', '信还在抽屉里', '那页已经折出印了。', now - 400 * 60_000)
   appealing.status = 'appealing'
   appealing.nextAction = 'none'
   appealing.moderationId = 'mod_ops_appealing_1'
   appealing.appealAt = now - 30 * 60_000
   appealing.appealText = '请再看一眼，这是它留下的。'
+  down.status = 'takendown'
+  down.nextAction = 'none'
+  down.moderationId = 'mod_ops_down_1'
+  down.reviewedAt = now - 380 * 60_000
+  down.handledAt = now - 20 * 60_000
   pendingA.moderationId = 'mod_ops_pending_1'
   pendingB.moderationId = 'mod_ops_pending_2'
   return {
-    works: [pendingA, pendingB, appealing],
+    works: [pendingA, pendingB, appealing, down],
     tickets: [
       queuedTicket('mod_ops_pending_1', OPS_PENDING_A, 'acc_ops_a', 1, now - 18 * 60_000),
       queuedTicket('mod_ops_pending_2', OPS_PENDING_B, 'acc_ops_b', 1, now - 40 * 60_000),
@@ -847,6 +884,17 @@ function seedOperatorWorks(now: number): { works: MockWork[]; tickets: MockWorkT
         preAppealStatus: 'rejected',
         appealAt: now - 30 * 60_000,
         appealText: appealing.appealText,
+      },
+      {
+        moderationId: 'mod_ops_down_1',
+        workId: OPS_DOWN,
+        submitBy: 'acc_ops_d',
+        state: 'takendown',
+        stateVersion: 3,
+        contentVersion: 1,
+        createdAt: now - 400 * 60_000,
+        reasonCode: 'policy',
+        handledAt: now - 20 * 60_000,
       },
     ],
   }
@@ -952,6 +1000,31 @@ function deriveTickets(works: Work[]): MockWorkTicket[] {
         handledAt: mock.handledAt,
       }]
     }
+    if (work.status === 'public') {
+      return [{
+        moderationId: mock.moderationId ?? `mod_${work.id}`,
+        workId: work.id,
+        submitBy: work.authorId,
+        state: 'approved' as const,
+        stateVersion: 2,
+        contentVersion: work.contentVersion ?? 1,
+        createdAt: work.createdAt ?? now,
+        handledAt: mock.handledAt,
+      }]
+    }
+    if (work.status === 'takendown') {
+      return [{
+        moderationId: mock.moderationId ?? `mod_${work.id}`,
+        workId: work.id,
+        submitBy: work.authorId,
+        state: 'takendown' as const,
+        stateVersion: 3,
+        contentVersion: work.contentVersion ?? 1,
+        createdAt: work.createdAt ?? now,
+        reasonCode: 'policy',
+        handledAt: mock.handledAt,
+      }]
+    }
     return []
   })
 }
@@ -1000,11 +1073,17 @@ export function mockWorkOperatorQueue(
   tab: WorkOperatorTab = 'pending',
 ): WorkOperatorTicket[] {
   ensureOperatorSeeds(state)
-  const appealing = tab === 'appealing'
   return state.tickets
-    .filter((ticket) => (appealing ? ticket.state === 'appealing' : ticket.state === 'queued' || ticket.state === 'assigned' || ticket.state === 'reviewing'))
+    .filter((ticket) => matchesOperatorTab(ticket.state, tab))
     .sort((a, b) => a.createdAt - b.createdAt || a.moderationId.localeCompare(b.moderationId))
     .map((ticket) => toOperatorTicket(ticket, state.works.find((work) => work.id === ticket.workId)))
+}
+
+function matchesOperatorTab(state: WorkTicketState, tab: WorkOperatorTab): boolean {
+  if (tab === 'appealing') return state === 'appealing'
+  if (tab === 'public') return state === 'approved'
+  if (tab === 'takendown') return state === 'takendown'
+  return state === 'queued' || state === 'assigned' || state === 'reviewing'
 }
 
 export function mockWorkOperatorDetail(state: WorksMockState, moderationId: string): WorkOperatorTicket {

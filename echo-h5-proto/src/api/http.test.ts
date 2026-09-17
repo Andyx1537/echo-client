@@ -357,6 +357,14 @@ describe('http 作品运营台', () => {
     await httpBackend.workOperatorQueue('appealing')
     expect(appealQueue.mock.calls[0][0]).toContain('tab=appealing')
 
+    const publicQueue = mockFetchOnce({ items: [], nextCursor: null })
+    await httpBackend.workOperatorQueue('public')
+    expect(publicQueue.mock.calls[0][0]).toContain('tab=public')
+
+    const downQueue = mockFetchOnce({ items: [], nextCursor: null })
+    await httpBackend.workOperatorQueue('takendown')
+    expect(downQueue.mock.calls[0][0]).toContain('tab=takendown')
+
     const handleFn = mockFetchOnce({
       moderationId: 'mod-1',
       workId: 'wk-1',
