@@ -87,7 +87,7 @@ export default function App() {
   const [worksOpen, setWorksOpen] = useState(false)
   const [favoritesOpen, setFavoritesOpen] = useState(false)
   const [openWorkId, setOpenWorkId] = useState<string | null>(null)
-  const [immersive, setImmersive] = useState<{ items: Work[]; workId: string } | null>(null)
+  const [immersive, setImmersive] = useState<{ items: Work[]; workId: string; reqId: string } | null>(null)
   const [profileImmersive, setProfileImmersive] = useState<{ items: Work[]; workId: string } | null>(null)
   const [plazaCategory, setPlazaCategory] = useState<NonNullable<Window['category']> | null>(null)
 
@@ -450,8 +450,9 @@ export default function App() {
             <WorkImmersiveScreen
               work={work}
               items={immersive.items}
+              reqId={immersive.reqId}
               onBack={() => setImmersive(null)}
-              onChange={(next) => setImmersive({ items: immersive.items, workId: next.id })}
+              onChange={(next) => setImmersive({ items: immersive.items, workId: next.id, reqId: immersive.reqId })}
               onOpenComments={(next) => setOpenWorkId(next.id)}
               onOpenAuthor={(next) => setProfileUserId(next.authorId)}
             />
@@ -559,7 +560,18 @@ export default function App() {
       case 'home':
         return (
           <PlazaScreen
-            onOpen={(work, feed) => setImmersive({ items: feed, workId: work.id })}
+            onOpen={(work, feed, fromReqId) => {
+              setImmersive({ items: feed, workId: work.id, reqId: '' })
+              void api.openPlazaImmersive(fromReqId).then((session) => {
+                setImmersive((cur) =>
+                  cur && cur.workId === work.id
+                    ? { ...cur, reqId: session.reqId }
+                    : cur,
+                )
+              }).catch(() => {
+                /* 快照没换成：进得去，不记 n */
+              })
+            }}
             onOpenSearch={() => setSearchOpen(true)}
             guest={Boolean(me?.isGuest)}
           />
